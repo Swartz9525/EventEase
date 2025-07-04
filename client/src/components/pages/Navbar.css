@@ -1,0 +1,29 @@
+.eventease-logo {
+  color: #4c00ff;
+  font-size: 1.6rem;
+}
+
+.navbar-nav .nav-link {
+  font-weight: 500;
+  color: #333;
+}
+
+.navbar-dark .nav-link {
+  color: #ccc !important;
+}
+
+.navbar-dark .nav-link:hover {
+  color: #fff !important;
+}
+
+.navbar-light .nav-link:hover {
+  color: #4c00ff !important;
+}
+
+.dropdown-menu {
+  min-width: 150px;
+}
+
+.badge {
+  font-size: 0.6rem;
+}
