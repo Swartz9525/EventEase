@@ -24,6 +24,7 @@ import Settings from "./components/pages/Settings";
 import About from "./components/pages/About";
 import NotFound from "./components/pages/NotFound"; // Optional
 import ForgotPassword from "./components/authentication/ForgotPassword";
+import ResetPassword from "./components/authentication/ResetPassword";
 
 const AppLayout = ({ children }) => {
   const location = useLocation();
@@ -53,6 +54,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
 
             {/* Protected Routes */}
             <Route

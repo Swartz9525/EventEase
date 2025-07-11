@@ -1,7 +1,7 @@
 import React from "react";
 
 const Settings = () => {
-  return <div></div>;
+  return <div>hsduhfsufhsdjuyhfgbsdjyhfgvsdj</div>;
 };
 
 export default Settings;

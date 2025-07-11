@@ -11,7 +11,7 @@ import {
   InputGroup,
 } from "react-bootstrap";
 import { FiEye, FiEyeOff } from "react-icons/fi";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 
 const Register = () => {
   const [form, setForm] = useState({
@@ -138,7 +138,6 @@ const Register = () => {
             </Form.Floating>
           </Form.Group>
 
-          {/* Password Field with Show/Hide */}
           <Form.Group className="mb-4">
             <InputGroup>
               <Form.Floating className="flex-grow-1">
@@ -193,6 +192,13 @@ const Register = () => {
             )}
           </Button>
         </Form>
+
+        <div className="text-center mt-3">
+          Already have an account?{" "}
+          <Link to="/login" className="fw-bold text-decoration-none">
+            Login here
+          </Link>
+        </div>
       </Card>
     </Container>
   );

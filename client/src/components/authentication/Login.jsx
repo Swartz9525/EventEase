@@ -1,4 +1,3 @@
-// File: src/pages/Login.jsx
 import React, { useEffect, useState } from "react";
 import {
   Container,
@@ -9,10 +8,10 @@ import {
   Spinner,
   InputGroup,
 } from "react-bootstrap";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import Confetti from "react-confetti";
-import { jwtDecode } from "jwt-decode"; // ✅ Correct named import
+import { jwtDecode } from "jwt-decode";
 
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -26,7 +25,7 @@ const Login = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || "/"; // ⭐ return to previous page
+  const from = location.state?.from?.pathname || "/";
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -36,7 +35,7 @@ const Login = () => {
         if (decoded.exp * 1000 > Date.now()) {
           navigate(from, { replace: true });
         }
-      } catch (e) {
+      } catch {
         localStorage.removeItem("token");
       }
     }
@@ -66,7 +65,7 @@ const Login = () => {
       setShowConfetti(true);
 
       setTimeout(() => {
-        navigate(from, { replace: true }); // ✅ Redirect to previous protected route
+        navigate(from, { replace: true });
       }, 2000);
     } catch (err) {
       setStatus({ loading: false, error: err.message, success: false });
@@ -77,41 +76,46 @@ const Login = () => {
     <Container className="py-5">
       <Card
         className="p-4 shadow-lg border-0 mx-auto rounded-4"
-        style={{ maxWidth: "500px" }}
+        style={{ maxWidth: "480px" }}
       >
         <div className="text-center mb-4">
-          <h2 className="fw-bold text-primary">Login</h2>
-          <p className="text-muted">Access your account below</p>
+          <h2 className="fw-bold text-primary">Welcome Back 👋</h2>
+          <p className="text-muted">Login to continue managing your events</p>
         </div>
 
         {status.error && <Alert variant="danger">{status.error}</Alert>}
         {status.success && <Alert variant="success">Login successful!</Alert>}
 
-        <Form onSubmit={handleSubmit}>
+        <Form onSubmit={handleSubmit} className="mt-3">
           <Form.Group className="mb-3">
-            <Form.Label>Email</Form.Label>
+            <Form.Label className="fw-semibold">Email address</Form.Label>
             <Form.Control
               type="email"
               name="email"
+              placeholder="e.g. user@example.com"
               value={form.email}
               onChange={handleChange}
               required
+              className="rounded-3"
             />
           </Form.Group>
 
-          <Form.Group className="mb-4">
-            <Form.Label>Password</Form.Label>
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold">Password</Form.Label>
             <InputGroup>
               <Form.Control
                 type={showPassword ? "text" : "password"}
                 name="password"
+                placeholder="Enter your password"
                 value={form.password}
                 onChange={handleChange}
                 required
+                className="rounded-start-3"
               />
               <Button
                 variant="outline-secondary"
                 onClick={() => setShowPassword((prev) => !prev)}
+                className="rounded-end-3"
               >
                 {showPassword ? <FiEyeOff /> : <FiEye />}
               </Button>
@@ -119,15 +123,15 @@ const Login = () => {
           </Form.Group>
 
           <div className="d-flex justify-content-end mb-3">
-            <a href="/forgot-password" className="text-decoration-none small">
+            <Link to="/forgot-password" className="small text-decoration-none">
               Forgot Password?
-            </a>
+            </Link>
           </div>
 
           <Button
             type="submit"
             variant="primary"
-            className="w-100 fw-bold"
+            className="w-100 fw-bold rounded-pill"
             disabled={status.loading}
           >
             {status.loading ? (
@@ -139,6 +143,13 @@ const Login = () => {
             )}
           </Button>
         </Form>
+
+        <p className="text-center mt-4 mb-0 small">
+          Don’t have an account?{" "}
+          <Link to="/register" className="fw-bold text-decoration-none">
+            Register here
+          </Link>
+        </p>
       </Card>
 
       {showConfetti && <Confetti recycle={false} numberOfPieces={300} />}

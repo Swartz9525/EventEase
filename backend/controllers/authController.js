@@ -1,9 +1,20 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 const REFRESH_SECRET = process.env.REFRESH_SECRET || "your_refresh_secret";
+const CLIENT_URL = process.env.BASE_URL || "http://localhost:5173"; // frontend
+
+// Nodemailer transporter setup
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 // REGISTER
 const registerUser = async (req, res) => {
@@ -41,12 +52,16 @@ const loginUser = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
-    const accessToken = jwt.sign(
-      { id: user._id, role: user.role },
-      JWT_SECRET,
-      { expiresIn: "15m" }
-    );
+    const payload = {
+      id: user._id,
+      email: user.email,
+      name: `${user.firstName} ${user.lastName}`,
+      mobile: user.mobile,
+      role: user.role || "user",
+      profilePic: user.profilePic || "",
+    };
 
+    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: "15m" });
     const refreshToken = jwt.sign({ id: user._id }, REFRESH_SECRET, {
       expiresIn: "7d",
     });
@@ -57,7 +72,7 @@ const loginUser = async (req, res) => {
   }
 };
 
-// FORGOT PASSWORD
+// FORGOT PASSWORD with email sending
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
   try {
@@ -68,10 +83,28 @@ const forgotPassword = async (req, res) => {
       expiresIn: "15m",
     });
 
-    // Normally: send resetToken to user email
-    res.json({ message: "Reset link sent (mock)", resetToken });
+    const resetUrl = `${CLIENT_URL}/reset-password/${resetToken}`;
+
+    const mailOptions = {
+      from: `"EventEase Support" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "🔐 Reset Your Password",
+      html: `
+        <p>Hello <b>${user.firstName}</b>,</p>
+        <p>You requested to reset your password.</p>
+        <p><a href="${resetUrl}" style="color:#007bff;">Click here to reset password</a></p>
+        <p>This link will expire in 15 minutes.</p>
+        <br/>
+        <p>Regards,<br/>EventEase Team</p>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.json({ message: "Reset link sent to your email!" });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error("Email send error:", err);
+    res.status(500).json({ message: "Failed to send reset link", error: err.message });
   }
 };
 

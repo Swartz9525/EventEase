@@ -26,7 +26,7 @@ const ForgotPassword = () => {
 
       setStatus({
         loading: false,
-        message: "Reset link sent to your email!",
+        message: "✅ Reset link sent to your email!",
         error: false,
       });
     } catch (err) {
