@@ -1,22 +1,25 @@
 // File: src/components/HeroCarousel.jsx
 import React from "react";
-import { Carousel, Container } from "react-bootstrap";
+import { Carousel } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./HeroCarousel.css";
+import wedding from "../../assets/elegantWedding.jpg";
+import corporate from "../../assets/splash1.jpg";
+import birthday from "../../assets/splash2.jpg";
 
 const slides = [
   {
-    image: "https://source.unsplash.com/1600x600/?wedding,ceremony",
+    image: wedding,
     title: "Elegant Weddings",
     description: "Crafting unforgettable moments with precision and style.",
   },
   {
-    image: "https://source.unsplash.com/1600x600/?corporate,conference",
+    image: corporate,
     title: "Corporate Excellence",
     description: "Professional setups that impress and deliver impact.",
   },
   {
-    image: "https://source.unsplash.com/1600x600/?birthday,celebration",
+    image: birthday,
     title: "Vibrant Birthdays",
     description: "From themes to thrills, we bring the party to life.",
   },

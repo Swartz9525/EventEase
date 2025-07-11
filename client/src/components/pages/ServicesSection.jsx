@@ -9,11 +9,11 @@ import {
   Button,
   OverlayTrigger,
   Tooltip,
-  Modal,
   Form,
 } from "react-bootstrap";
-import "./ServicesSection.css";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import "./ServicesSection.css";
 
 const allServices = [
   {
@@ -101,7 +101,7 @@ const categories = [
 const ServicesSection = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [modalData, setModalData] = useState(null);
+  const navigate = useNavigate();
 
   const filteredServices = allServices.filter((service) => {
     const matchesCategory =
@@ -161,7 +161,13 @@ const ServicesSection = () => {
                 >
                   <Card
                     className="service-card h-100 text-center"
-                    onClick={() => setModalData(service)}
+                    onClick={() =>
+                      navigate(
+                        `/services/${service.title
+                          .toLowerCase()
+                          .replace(/\s+/g, "-")}`
+                      )
+                    }
                     style={{ cursor: "pointer" }}
                   >
                     <Card.Body>
@@ -178,30 +184,6 @@ const ServicesSection = () => {
           </AnimatePresence>
         </Row>
       )}
-
-      {/* Modal for service details */}
-      <Modal
-        show={modalData !== null}
-        onHide={() => setModalData(null)}
-        centered
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>
-            {modalData?.icon} {modalData?.title}
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p>{modalData?.description}</p>
-          <p>
-            <strong>Category:</strong> {modalData?.category}
-          </p>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setModalData(null)}>
-            Close
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </Container>
   );
 };
