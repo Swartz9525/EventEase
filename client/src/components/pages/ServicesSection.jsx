@@ -17,6 +17,18 @@ import "./ServicesSection.css";
 
 const allServices = [
   {
+    title: "Corporate Events",
+    category: "Corporate",
+    description: "Professional and engaging corporate setups.",
+    icon: "🏢",
+  },
+  {
+    title: "Product Launches",
+    category: "Corporate",
+    description: "Sleek and impactful setups for your brand.",
+    icon: "🚀",
+  },
+  {
     title: "Weddings",
     category: "Personal",
     description:
@@ -28,12 +40,6 @@ const allServices = [
     category: "Personal",
     description: "Themed birthday events filled with joy and fun for all ages.",
     icon: "🎉",
-  },
-  {
-    title: "Corporate Events",
-    category: "Corporate",
-    description: "Professional and engaging corporate setups.",
-    icon: "🏢",
   },
   {
     title: "Anniversaries",
@@ -59,12 +65,7 @@ const allServices = [
     description: "High-energy music events with pro audio/visual.",
     icon: "🎶",
   },
-  {
-    title: "Product Launches",
-    category: "Corporate",
-    description: "Sleek and impactful setups for your brand.",
-    icon: "🚀",
-  },
+
   {
     title: "Award Ceremonies",
     category: "Corporate",

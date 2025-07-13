@@ -12,6 +12,15 @@ import {
 import { Link } from "react-router-dom";
 import HeroCarousel from "./HeroCarousel";
 
+const staticImages = [
+  "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1066430473%2F2824830914871%2F1%2Foriginal.png?h=200&w=512&auto=format%2Ccompress&q=75&sharp=10&rect=0%2C0%2C940%2C470&s=ed132eb38cc71546b90cd380207dc339",
+  "https://tse1.mm.bing.net/th/id/OIP.jUw1QMntV4ZqhHmqmcP1JAHaE8?pid=Api&P=0&h=220",
+  "https://tse1.mm.bing.net/th/id/OIP.wVS0lAcQPXYFbrgWt8nPNQHaEO?pid=Api&P=0&h=220",
+  "https://tse4.mm.bing.net/th/id/OIP.R6L5KZO2c-gSCVIURcGoVQHaFj?pid=Api&P=0&h=220",
+  "https://tse1.mm.bing.net/th/id/OIP.P7zOq36SYCdzw8pG2-To-AHaE7?pid=Api&P=0&h=220",
+  "https://images.unsplash.com/photo-1531058020387-3be344556be6",
+];
+
 const Home = () => {
   return (
     <>
@@ -44,17 +53,30 @@ const Home = () => {
         </Row>
       </Container>
 
-      {/* Past Events Gallery */}
       <Container className="py-5 bg-light">
         <h2 className="text-center mb-4">Our Past Events</h2>
         <Row>
-          {[1, 2, 3, 4, 5, 6].map((_, idx) => (
-            <Col md={4} className="mb-3" key={idx}>
-              <img
-                src={`https://source.unsplash.com/400x300/?event,${idx}`}
-                alt={`event-${idx}`}
-                className="img-fluid rounded shadow-sm"
-              />
+          {staticImages.map((imgUrl, idx) => (
+            <Col md={4} className="mb-4" key={idx}>
+              <div
+                style={{
+                  width: "100%",
+                  height: "250px",
+                  overflow: "hidden",
+                  borderRadius: "10px",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+                }}
+              >
+                <img
+                  src={imgUrl}
+                  alt={`event-${idx + 1}`}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+              </div>
             </Col>
           ))}
         </Row>

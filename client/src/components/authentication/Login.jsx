@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   Container,
   Card,
@@ -12,6 +12,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import Confetti from "react-confetti";
 import { jwtDecode } from "jwt-decode";
+import { AuthContext } from "../context/AuthContext"; // ✅ use correct path
 
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -25,11 +26,12 @@ const Login = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useContext(AuthContext); // ✅ use login from context
   const from = location.state?.from?.pathname || "/";
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
+    if (typeof token === "string" && token.trim()) {
       try {
         const decoded = jwtDecode(token);
         if (decoded.exp * 1000 > Date.now()) {
@@ -37,6 +39,7 @@ const Login = () => {
         }
       } catch {
         localStorage.removeItem("token");
+        localStorage.removeItem("user");
       }
     }
   }, []);
@@ -58,9 +61,15 @@ const Login = () => {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Login failed");
+      if (!res.ok || !data.token || !data.user) {
+        throw new Error(data.message || "Login failed");
+      }
 
+      // ✅ Save token and full user info in localStorage and context
       localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      login(data.token, data.user); // ✅ call AuthContext login()
+
       setStatus({ loading: false, error: "", success: true });
       setShowConfetti(true);
 

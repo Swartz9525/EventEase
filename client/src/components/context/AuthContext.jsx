@@ -7,31 +7,36 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
-  // Load user from token on page reload
+  // Load user from localStorage on page reload
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
+    const userData = localStorage.getItem("user");
+
+    if (token && userData) {
       try {
         const decoded = jwtDecode(token);
         if (decoded.exp * 1000 > Date.now()) {
-          setUser(decoded);
+          setUser(JSON.parse(userData));
         } else {
           localStorage.removeItem("token");
+          localStorage.removeItem("user");
         }
       } catch (err) {
         localStorage.removeItem("token");
+        localStorage.removeItem("user");
       }
     }
   }, []);
 
-  const login = (token) => {
+  const login = (token, userData) => {
     localStorage.setItem("token", token);
-    const decoded = jwtDecode(token);
-    setUser(decoded);
+    localStorage.setItem("user", JSON.stringify(userData));
+    setUser(userData);
   };
 
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
   };
 

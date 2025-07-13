@@ -1,6 +1,6 @@
 // File: src/components/pages/Navbar.jsx
 import React, { useEffect, useState, useContext } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import "./Navbar.css";
 
@@ -8,11 +8,13 @@ const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
   const [darkMode, setDarkMode] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // Hide navbar on login, register, forgot-password pages
+  // Hide navbar on auth pages
   const hideNavbarPaths = ["/login", "/register", "/forgot-password"];
   if (hideNavbarPaths.includes(location.pathname)) return null;
 
+  // Load dark mode preference
   useEffect(() => {
     const savedTheme = localStorage.getItem("darkMode");
     if (savedTheme === "true") {
@@ -29,13 +31,18 @@ const Navbar = () => {
     document.body.classList.toggle("text-white");
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <nav
-      className={`navbar navbar-expand-lg sticky-top shadow-sm py-4 ${
+      className={`navbar navbar-expand-lg sticky-top shadow-sm py-3 ${
         darkMode ? "navbar-dark bg-dark" : "navbar-light bg-light"
       }`}
     >
-      <div className="container d-flex justify-content-between align-items-center">
+      <div className="container-fluid px-4">
         <NavLink className="navbar-brand fw-bold fs-4 text-primary" to="/">
           🎉 EventEase
         </NavLink>
@@ -56,8 +63,8 @@ const Navbar = () => {
               { name: "Services", path: "/services" },
               { name: "About", path: "/about" },
             ].map(({ name, path }) => (
-              <li className="nav-item fw-bold fs-5 me-4" key={name}>
-                <NavLink className="nav-link" to={path}>
+              <li className="nav-item" key={path}>
+                <NavLink className="nav-link fw-semibold fs-5 me-3" to={path}>
                   {name}
                 </NavLink>
               </li>
@@ -67,23 +74,27 @@ const Navbar = () => {
           <div className="d-flex align-items-center gap-3">
             <input
               type="text"
-              className="form-control form-control-sm fw-semibold fs-6"
+              className="form-control form-control-sm fw-semibold"
               placeholder="Search..."
-              style={{ maxWidth: "220px" }}
+              style={{ maxWidth: "200px" }}
             />
 
-            <button className="btn btn-outline-secondary position-relative fw-bold">
+            {/* <button
+              className="btn btn-outline-secondary position-relative fw-bold"
+              title="Notifications"
+            >
               🔔
               <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                 3
               </span>
-            </button>
+            </button> */}
 
             <button
               className={`btn btn-sm fw-bold fs-6 ${
                 darkMode ? "btn-light" : "btn-dark"
               }`}
               onClick={toggleTheme}
+              title="Toggle Theme"
             >
               {darkMode ? "☀️" : "🌙"}
             </button>
@@ -93,11 +104,16 @@ const Navbar = () => {
                 <div className="dropdown">
                   <button
                     className="btn btn-outline-primary dropdown-toggle fw-bold"
+                    id="profileDropdown"
                     data-bs-toggle="dropdown"
+                    aria-expanded="false"
                   >
                     {user.firstName || user.name || "User"}
                   </button>
-                  <ul className="dropdown-menu dropdown-menu-end">
+                  <ul
+                    className="dropdown-menu dropdown-menu-end"
+                    aria-labelledby="profileDropdown"
+                  >
                     <li>
                       <NavLink className="dropdown-item" to="/profile">
                         Profile
@@ -114,21 +130,13 @@ const Navbar = () => {
                     <li>
                       <button
                         className="dropdown-item text-danger"
-                        onClick={logout}
+                        onClick={handleLogout}
                       >
                         Logout
                       </button>
                     </li>
                   </ul>
                 </div>
-
-                <img
-                  src={user.profilePic || "https://via.placeholder.com/40"}
-                  alt="Profile"
-                  className="rounded-circle border border-secondary"
-                  width={50}
-                  height={50}
-                />
               </>
             ) : (
               <NavLink className="btn btn-primary fw-bold fs-6" to="/login">

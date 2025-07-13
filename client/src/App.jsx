@@ -1,9 +1,9 @@
 // File: src/App.jsx
 import React from "react";
 import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
+  createBrowserRouter,
+  RouterProvider,
+  Outlet,
   useLocation,
 } from "react-router-dom";
 
@@ -22,11 +22,12 @@ import Login from "./components/authentication/Login";
 import Profile from "./components/pages/Profile";
 import Settings from "./components/pages/Settings";
 import About from "./components/pages/About";
-import NotFound from "./components/pages/NotFound"; // Optional
+import NotFound from "./components/pages/NotFound";
 import ForgotPassword from "./components/authentication/ForgotPassword";
 import ResetPassword from "./components/authentication/ResetPassword";
 
-const AppLayout = ({ children }) => {
+// ✅ Layout Component
+const AppLayout = () => {
   const location = useLocation();
   const hideNavbar = ["/login", "/register", "/forgot-password"].includes(
     location.pathname
@@ -35,58 +36,68 @@ const AppLayout = ({ children }) => {
   return (
     <>
       {!hideNavbar && <Navbar />}
-      {children}
+      <Outlet />
     </>
   );
 };
 
+// ✅ Router Configuration
+const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <AppLayout />,
+      children: [
+        { index: true, element: <Home /> },
+        { path: "services", element: <Services /> },
+        { path: "services/:serviceId", element: <ServiceDetail /> },
+        { path: "about", element: <About /> },
+        { path: "login", element: <Login /> },
+        { path: "register", element: <Register /> },
+        { path: "forgot-password", element: <ForgotPassword /> },
+        { path: "reset-password/:token", element: <ResetPassword /> },
+
+        {
+          path: "payment",
+          element: (
+            <PrivateRoute>
+              <Payment />
+            </PrivateRoute>
+          ),
+        },
+        {
+          path: "profile",
+          element: (
+            <PrivateRoute>
+              <Profile />
+            </PrivateRoute>
+          ),
+        },
+        {
+          path: "settings",
+          element: (
+            <PrivateRoute>
+              <Settings />
+            </PrivateRoute>
+          ),
+        },
+
+        { path: "*", element: <NotFound /> },
+      ],
+    },
+  ],
+  {
+    future: {
+      v7_relativeSplatPath: true,
+    },
+  }
+);
+
+// ✅ App Root
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <AppLayout>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Home />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/services/:serviceId" element={<ServiceDetail />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password/:token" element={<ResetPassword />} />
-
-            {/* Protected Routes */}
-            <Route
-              path="/payment"
-              element={
-                <PrivateRoute>
-                  <Payment />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <PrivateRoute>
-                  <Profile />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <PrivateRoute>
-                  <Settings />
-                </PrivateRoute>
-              }
-            />
-
-            {/* 404 Page */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AppLayout>
-      </Router>
+      <RouterProvider router={router} />
     </AuthProvider>
   );
 }

@@ -43,6 +43,7 @@ const registerUser = async (req, res) => {
 };
 
 // LOGIN
+// LOGIN
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -66,11 +67,17 @@ const loginUser = async (req, res) => {
       expiresIn: "7d",
     });
 
-    res.json({ token: accessToken, refreshToken });
+    res.json({
+      token: accessToken,
+      refreshToken,
+      user: payload, // ✅ send user info to frontend
+    });
   } catch (err) {
+    console.error("Login error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // FORGOT PASSWORD with email sending
 const forgotPassword = async (req, res) => {
@@ -125,9 +132,36 @@ const refreshToken = async (req, res) => {
   }
 };
 
+const changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const userId = req.user.id;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch)
+      return res.status(400).json({ message: "Current password is incorrect" });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.json({ message: "Password changed successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+
 module.exports = {
   registerUser,
   loginUser,
   forgotPassword,
   refreshToken,
+  changePassword,
 };
