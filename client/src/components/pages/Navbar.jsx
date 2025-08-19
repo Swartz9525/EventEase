@@ -3,6 +3,7 @@ import React, { useEffect, useState, useContext } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import "./Navbar.css";
+import logo from "../../assets/logo.jpg"; // Adjust the path as necessary
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -43,8 +44,15 @@ const Navbar = () => {
       }`}
     >
       <div className="container-fluid px-4">
-        <NavLink className="navbar-brand fw-bold fs-4 text-primary" to="/">
-          🎉 EventEase
+        <NavLink
+          className="navbar-brand fw-bold fs-4 text-primary d-flex align-items-center gap-2"
+          to="/"
+        >
+          <img
+            src={logo} // Replace with your actual image path
+            alt="EventEase Logo"
+            style={{ width: "200px", height: "40px" }}
+          />
         </NavLink>
 
         <button

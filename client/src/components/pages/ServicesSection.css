@@ -1,13 +1,31 @@
 .service-card {
   border: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s ease;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.35s ease;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 .service-card:hover {
-  transform: translateY(-5px);
+  transform: scale(1.05);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
 }
 
-.service-icon {
-  font-size: 2.5rem;
+.service-img {
+  height: 220px;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.service-card:hover .service-img {
+  transform: scale(1.08);
+}
+
+.service-card h5 {
+  margin-top: 12px;
+  transition: color 0.3s ease;
+}
+
+.service-card:hover h5 {
+  color: #0d6efd;
 }

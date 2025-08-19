@@ -2,6 +2,11 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
+const fs = require("fs");
+const path = require("path");
+const Service = require("../models/Service");
+const SubService = require("../models/SubServices");
+const Booking = require("../models/Booking");
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 const REFRESH_SECRET = process.env.REFRESH_SECRET || "your_refresh_secret";
@@ -42,7 +47,6 @@ const registerUser = async (req, res) => {
   }
 };
 
-// LOGIN
 // LOGIN
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
@@ -158,10 +162,263 @@ const changePassword = async (req, res) => {
 };
 
 
+
+// ADD SERVICE
+const addService = async (req, res) => {
+  try {
+    const { name, description, image } = req.body;
+
+    if (!name || !description || !image) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const newService = new Service({ name, description, image });
+    await newService.save();
+
+    res.status(201).json({ message: "Service added successfully", service: newService });
+  } catch (error) {
+    console.error("addService error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
+// GET ALL SERVICES
+const getServices = async (req, res) => {
+  try {
+    const services = await Service.find().sort({ createdAt: -1 });
+    res.json(services);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// UPDATE SERVICE
+const updateService = async (req, res) => {
+  try {
+    const { name, description, image } = req.body;
+
+    const updatedService = await Service.findByIdAndUpdate(
+      req.params.id,
+      { name, description, image },
+      { new: true } // ✅ return updated doc instead of old one
+    );
+
+    if (!updatedService) {
+      return res.status(404).json({ message: "Service not found" });
+    }
+
+    res.json(updatedService); // ✅ send updated object back
+  } catch (error) {
+    console.error("updateService error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// DELETE SERVICE
+const deleteService = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const service = await Service.findById(id);
+    if (!service) return res.status(404).json({ message: "Service not found" });
+
+    // Remove image file
+    if (service.image) {
+      const imagePath = path.join(__dirname, "..", service.image);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
+
+    await service.deleteOne();
+    res.json({ message: "Service deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
+
+// ADD SUBSERVICE
+const addSubService = async (req, res) => {
+  try {
+    const { title, description, price, quantity } = req.body;
+
+    if (!title || !description || !price || !quantity) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const newSubService = new SubService({ title, description, price, quantity });
+    await newSubService.save();
+
+    res.status(201).json({
+      message: "SubService added successfully",
+      subService: newSubService,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// GET ALL SUBSERVICES
+const getSubServices = async (req, res) => {
+  try {
+    const subServices = await SubService.find().sort({ createdAt: -1 });
+    res.json(subServices);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// UPDATE SUBSERVICE
+const updateSubService = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, price, quantity } = req.body;
+
+    const subService = await SubService.findById(id);
+    if (!subService) return res.status(404).json({ message: "SubService not found" });
+
+    subService.title = title || subService.title;
+    subService.description = description || subService.description;
+    subService.price = price || subService.price;
+    subService.quantity = quantity || subService.quantity;
+
+    await subService.save();
+    res.json({ message: "SubService updated successfully", subService });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// DELETE SUBSERVICE
+const deleteSubService = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const subService = await SubService.findById(id);
+    if (!subService) return res.status(404).json({ message: "SubService not found" });
+
+    await subService.deleteOne();
+    res.json({ message: "SubService deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
+// Create booking
+const createBooking = async (req, res) => {
+  try {
+    const { email, services, total, eventDate } = req.body;
+
+    if (!email || !services || total === undefined || !eventDate) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Sanitize services array
+    const sanitizedServices = services.map((s) => ({
+      name: s.name || s.title || "Unknown",
+      type: s.type || "Unknown",
+      price: Number(s.price) || 0,
+      quantity: Number(s.quantity) || 1,
+    }));
+
+    const booking = new Booking({
+      email,
+      services: sanitizedServices,
+      total: Number(total) || 0,
+      date: new Date(),              // booking creation timestamp
+      eventDate: new Date(eventDate),// actual event date
+      status: "pending",             // default status
+    });
+
+    await booking.save();
+    res.status(201).json({ message: "Booking saved successfully", booking });
+  } catch (err) {
+    console.error("Booking creation error:", err);
+    res.status(500).json({ message: "Internal server error", error: err.message });
+  }
+};
+
+// Get bookings by email (most recent event first)
+const getBookingsByEmail = async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    const bookings = await Booking.find({ email }).sort({ eventDate: -1 });
+    res.json({ bookings });
+  } catch (err) {
+    console.error("Error fetching bookings:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Get all bookings (admin)
+const getAllBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.find().sort({ date: -1 });
+    res.json(bookings); // returns all bookings
+  } catch (err) {
+    console.error("Get all bookings error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Update status of a booking (admin)
+const updateBookingStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!["approved", "rejected"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const booking = await Booking.findById(id);
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    booking.status = status;
+    await booking.save();
+
+    res.json({ message: "Booking status updated", booking });
+  } catch (err) {
+    console.error("Update booking status error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().sort({ createdAt: -1 });
+    res.json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+
 module.exports = {
   registerUser,
   loginUser,
   forgotPassword,
   refreshToken,
   changePassword,
+  addService,
+  getServices,
+  updateService,
+  deleteService,
+  addSubService,
+  getSubServices,
+  updateSubService,
+  deleteSubService,
+  createBooking,
+  getBookingsByEmail,
+  updateBookingStatus,
+  getAllBookings,
+  getAllUsers,
 };

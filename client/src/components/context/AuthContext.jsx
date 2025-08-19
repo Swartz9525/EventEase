@@ -1,47 +1,47 @@
-// File: src/context/AuthContext.jsx
-import React, { createContext, useEffect, useState } from "react";
-import { jwtDecode } from "jwt-decode";
+import { createContext, useState, useEffect } from "react";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
 
-  // Load user from localStorage on page reload
+  // Initialize auth state from localStorage
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
+    const storedToken = localStorage.getItem("token");
+    const storedUser = JSON.parse(localStorage.getItem("user"));
 
-    if (token && userData) {
-      try {
-        const decoded = jwtDecode(token);
-        if (decoded.exp * 1000 > Date.now()) {
-          setUser(JSON.parse(userData));
-        } else {
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-        }
-      } catch (err) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+    if (storedToken && storedUser) {
+      const expiry = parseInt(localStorage.getItem("tokenExpiry"), 10);
+      if (expiry && expiry > Date.now()) {
+        setToken(storedToken);
+        setUser(storedUser);
+      } else {
+        // Token expired
+        logout();
       }
     }
   }, []);
 
-  const login = (token, userData) => {
+  const login = (token, user) => {
+    const expiry = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+    setToken(token);
+    setUser(user);
     localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(userData));
-    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem("tokenExpiry", expiry.toString());
   };
 
   const logout = () => {
+    setToken(null);
+    setUser(null);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    setUser(null);
+    localStorage.removeItem("tokenExpiry");
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, token, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

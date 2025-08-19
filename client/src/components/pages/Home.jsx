@@ -1,117 +1,265 @@
-// File: src/pages/Home.jsx
-import React from "react";
-import {
-  Carousel,
-  Container,
-  Row,
-  Col,
-  Card,
-  Form,
-  Button,
-} from "react-bootstrap";
+import React, { useEffect, useState } from "react";
+import { Container, Row, Col, Card, Form, Button } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import HeroCarousel from "./HeroCarousel";
+import { motion, useAnimation } from "framer-motion";
+import { useInView } from "react-intersection-observer";
+import { FiArrowRight, FiMail, FiPhone, FiMapPin } from "react-icons/fi";
+import { FaQuoteLeft } from "react-icons/fa";
+import axios from "axios";
+import "animate.css";
 
+// Static images for Past Events section
 const staticImages = [
-  "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1066430473%2F2824830914871%2F1%2Foriginal.png?h=200&w=512&auto=format%2Ccompress&q=75&sharp=10&rect=0%2C0%2C940%2C470&s=ed132eb38cc71546b90cd380207dc339",
-  "https://tse1.mm.bing.net/th/id/OIP.jUw1QMntV4ZqhHmqmcP1JAHaE8?pid=Api&P=0&h=220",
-  "https://tse1.mm.bing.net/th/id/OIP.wVS0lAcQPXYFbrgWt8nPNQHaEO?pid=Api&P=0&h=220",
-  "https://tse4.mm.bing.net/th/id/OIP.R6L5KZO2c-gSCVIURcGoVQHaFj?pid=Api&P=0&h=220",
-  "https://tse1.mm.bing.net/th/id/OIP.P7zOq36SYCdzw8pG2-To-AHaE7?pid=Api&P=0&h=220",
+  "https://images.unsplash.com/photo-1504384308090-c894fdcc538d",
+  "https://images.unsplash.com/photo-1551836022-4c4c79ecde16",
   "https://images.unsplash.com/photo-1531058020387-3be344556be6",
+  "https://images.unsplash.com/photo-1526045612212-70caf35c14df",
+  "https://images.unsplash.com/photo-1509228627152-72ae9ae6848d",
+  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
 ];
 
+// Animation wrapper
+const AnimatedCard = ({ children }) => {
+  const controls = useAnimation();
+  const [ref, inView] = useInView();
+
+  useEffect(() => {
+    if (inView) controls.start("visible");
+  }, [controls, inView]);
+
+  return (
+    <motion.div
+      ref={ref}
+      initial="hidden"
+      animate={controls}
+      variants={{
+        visible: { opacity: 1, y: 0 },
+        hidden: { opacity: 0, y: 50 },
+      }}
+      transition={{ duration: 0.5 }}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
 const Home = () => {
+  const [services, setServices] = useState([]);
+
+  // Fetch services from backend (first 4)
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/services");
+        setServices(res.data.slice(0, 4));
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchServices();
+  }, []);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    alert("Message submitted successfully!");
+  };
+
   return (
     <>
+      {/* Hero Section */}
       <HeroCarousel />
 
-      {/* Services We Offer */}
+      {/* Services Section */}
       <Container className="py-5">
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h2 className="mb-0">Services We Offer</h2>
-          <Link to="/services" className="btn btn-outline-primary btn-sm">
-            View All Services
-          </Link>
+          <motion.h2
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8 }}
+            className="mb-0"
+          >
+            Our Premium Services
+          </motion.h2>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Link to="/services" className="btn btn-outline-primary btn-sm">
+              Explore All Services <FiArrowRight className="ms-1" />
+            </Link>
+          </motion.div>
         </div>
         <Row>
-          {["Wedding", "Birthday", "Corporate", "Anniversary"].map(
-            (service) => (
-              <Col md={3} key={service} className="mb-4">
-                <Card className="h-100 text-center">
-                  <Card.Body>
-                    <Card.Title>{service}</Card.Title>
-                    <Card.Text>
-                      High-quality planning and management for your perfect{" "}
-                      {service.toLowerCase()}.
-                    </Card.Text>
-                  </Card.Body>
-                </Card>
-              </Col>
-            )
-          )}
-        </Row>
-      </Container>
-
-      <Container className="py-5 bg-light">
-        <h2 className="text-center mb-4">Our Past Events</h2>
-        <Row>
-          {staticImages.map((imgUrl, idx) => (
-            <Col md={4} className="mb-4" key={idx}>
-              <div
-                style={{
-                  width: "100%",
-                  height: "250px",
-                  overflow: "hidden",
-                  borderRadius: "10px",
-                  boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-                }}
-              >
-                <img
-                  src={imgUrl}
-                  alt={`event-${idx + 1}`}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
+          {services.map((service, index) => (
+            <Col md={3} key={service._id} className="mb-4">
+              <AnimatedCard>
+                <motion.div
+                  whileHover={{
+                    y: -10,
+                    boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
                   }}
-                />
-              </div>
+                  transition={{ duration: 0.3 }}
+                >
+                  <Link
+                    to={`/services/${service.name.toLowerCase()}`}
+                    className="text-decoration-none text-dark"
+                  >
+                    <Card className="h-100 text-center shadow-sm border-0 overflow-hidden">
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: index * 0.1, duration: 0.5 }}
+                      >
+                        <div
+                          className="service-image"
+                          style={{
+                            backgroundImage: `url(${service.image})`,
+                            height: "150px",
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                          }}
+                        />
+                        <Card.Body className="p-4">
+                          <Card.Title className="fw-bold">
+                            {service.name}
+                          </Card.Title>
+                          <Card.Text className="text-muted">
+                            {service.description}
+                          </Card.Text>
+                          <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="mt-3"
+                          >
+                            <Button variant="outline-primary" size="sm">
+                              Learn More
+                            </Button>
+                          </motion.div>
+                        </Card.Body>
+                      </motion.div>
+                    </Card>
+                  </Link>
+                </motion.div>
+              </AnimatedCard>
             </Col>
           ))}
         </Row>
       </Container>
 
-      {/* Feedback Section */}
-      <Container className="py-5">
-        <h2 className="text-center mb-4">Client Feedback</h2>
-        <Row>
-          {[1, 2, 3].map((_, idx) => (
+      {/* Past Events Section */}
+      <Container className="py-5 bg-light">
+        <motion.h2
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="text-center mb-5"
+        >
+          Our Successful Events
+        </motion.h2>
+        <Row className="g-4">
+          {staticImages.map((imgUrl, idx) => (
             <Col md={4} key={idx}>
-              <Card className="mb-4 shadow-sm border-0">
-                <Card.Body>
-                  <div className="d-flex align-items-center mb-3">
-                    <div
-                      className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
-                      style={{ width: 50, height: 50, fontSize: "1.5rem" }}
-                    >
-                      {`C${idx + 1}`}
-                    </div>
-                    <div className="ms-3">
-                      <Card.Title className="mb-0">Client {idx + 1}</Card.Title>
-                      <Card.Subtitle className="text-muted">
-                        Verified User
-                      </Card.Subtitle>
+              <AnimatedCard>
+                <motion.div
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="position-relative event-card"
+                >
+                  <div className="event-image-wrapper">
+                    <img
+                      src={imgUrl}
+                      alt={`Past event ${idx + 1}`}
+                      className="img-fluid rounded shadow event-image"
+                    />
+                    <div className="event-overlay">
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        whileHover={{ opacity: 1 }}
+                        className="overlay-content"
+                      >
+                        <Button variant="light" size="sm">
+                          View Gallery
+                        </Button>
+                      </motion.div>
                     </div>
                   </div>
-                  <Card.Text>
-                    <em>
-                      "EventEase made everything stress-free and smooth.
-                      Absolutely recommend them!"
-                    </em>
-                  </Card.Text>
-                </Card.Body>
-              </Card>
+                  <div className="event-caption p-3">
+                    <h5 className="mb-1">Event {idx + 1}</h5>
+                    <small className="text-muted">December 15, 2023</small>
+                  </div>
+                </motion.div>
+              </AnimatedCard>
+            </Col>
+          ))}
+        </Row>
+      </Container>
+
+      {/* Testimonials Section */}
+      <Container className="py-5">
+        <motion.h2
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="text-center mb-5"
+        >
+          Client Testimonials
+        </motion.h2>
+        <Row className="g-4">
+          {[1, 2, 3].map((_, idx) => (
+            <Col md={4} key={idx}>
+              <AnimatedCard>
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Card className="h-100 shadow-sm border-0">
+                    <Card.Body className="p-4">
+                      <div className="d-flex align-items-center mb-3">
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: idx * 0.2 }}
+                          className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                          style={{ width: 50, height: 50, fontSize: "1.5rem" }}
+                        >
+                          {`C${idx + 1}`}
+                        </motion.div>
+                        <div className="ms-3">
+                          <Card.Title className="mb-0">
+                            Client {idx + 1}
+                          </Card.Title>
+                          <Card.Subtitle className="text-muted">
+                            Verified User
+                          </Card.Subtitle>
+                        </div>
+                      </div>
+                      <div className="quote-icon">
+                        <FaQuoteLeft
+                          className="text-primary opacity-25"
+                          size={24}
+                        />
+                      </div>
+                      <Card.Text className="mt-3">
+                        <em>
+                          "EventEase made everything stress-free and smooth.
+                          Absolutely recommend them!"
+                        </em>
+                      </Card.Text>
+                      <div className="rating mt-3">
+                        {[...Array(5)].map((_, i) => (
+                          <motion.span
+                            key={i}
+                            whileHover={{ scale: 1.2 }}
+                            className="text-warning"
+                          >
+                            ★
+                          </motion.span>
+                        ))}
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </motion.div>
+              </AnimatedCard>
             </Col>
           ))}
         </Row>
@@ -119,38 +267,200 @@ const Home = () => {
 
       {/* Contact Section */}
       <Container className="py-5 bg-light">
-        <h2 className="text-center mb-4">Contact Us</h2>
-        <Form>
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Name</Form.Label>
-                <Form.Control type="text" placeholder="Your Name" />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Email</Form.Label>
-                <Form.Control type="email" placeholder="Your Email" />
-              </Form.Group>
-            </Col>
-          </Row>
-          <Form.Group className="mb-3">
-            <Form.Label>Message</Form.Label>
-            <Form.Control as="textarea" rows={3} placeholder="Your Message" />
-          </Form.Group>
-          <Button variant="primary" type="submit">
-            Submit
-          </Button>
-        </Form>
+        <Row>
+          <Col lg={6} className="mb-4 mb-lg-0">
+            <AnimatedCard>
+              <Card className="h-100 shadow-sm border-0">
+                <Card.Body className="p-4">
+                  <h5 className="mb-4">Our Contact Details</h5>
+                  <div className="contact-item mb-3">
+                    <FiMail className="me-3 text-primary" size={20} />
+                    <span>info@eventease.com</span>
+                  </div>
+                  <div className="contact-item mb-3">
+                    <FiPhone className="me-3 text-primary" size={20} />
+                    <span>+1 (555) 123-4567</span>
+                  </div>
+                  <div className="contact-item">
+                    <FiMapPin className="me-3 text-primary" size={20} />
+                    <span>123 Event Street, New York, NY 10001</span>
+                  </div>
+                  <motion.div
+                    className="mt-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    <h6 className="mb-3">Connect With Us</h6>
+                    <div className="social-icons">
+                      {["facebook", "twitter", "instagram", "linkedin"].map(
+                        (social) => (
+                          <motion.a
+                            key={social}
+                            href="#"
+                            whileHover={{ y: -3 }}
+                            className="me-3 text-dark"
+                          >
+                            <i className={`bi bi-${social}`}></i>
+                          </motion.a>
+                        )
+                      )}
+                    </div>
+                  </motion.div>
+                </Card.Body>
+              </Card>
+            </AnimatedCard>
+          </Col>
+
+          <Col lg={6}>
+            <AnimatedCard>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Card className="h-100 shadow-sm border-0">
+                  <Card.Body className="p-4">
+                    <Form onSubmit={handleSubmit}>
+                      <Row>
+                        <Col md={6}>
+                          <Form.Group className="mb-3">
+                            <Form.Label>Your Name</Form.Label>
+                            <Form.Control
+                              type="text"
+                              placeholder="Enter your name"
+                              required
+                              className="input-field"
+                            />
+                          </Form.Group>
+                        </Col>
+                        <Col md={6}>
+                          <Form.Group className="mb-3">
+                            <Form.Label>Email Address</Form.Label>
+                            <Form.Control
+                              type="email"
+                              placeholder="Enter your email"
+                              required
+                              className="input-field"
+                            />
+                          </Form.Group>
+                        </Col>
+                      </Row>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Your Message</Form.Label>
+                        <Form.Control
+                          as="textarea"
+                          rows={5}
+                          placeholder="Tell us about your event needs"
+                          required
+                          className="input-field"
+                        />
+                      </Form.Group>
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Button
+                          variant="primary"
+                          type="submit"
+                          className="w-100 py-2"
+                        >
+                          Send Inquiry
+                        </Button>
+                      </motion.div>
+                    </Form>
+                  </Card.Body>
+                </Card>
+              </motion.div>
+            </AnimatedCard>
+          </Col>
+        </Row>
       </Container>
 
       {/* Footer */}
-      <footer className="bg-dark text-white text-center py-3">
-        <p className="mb-0">
-          &copy; {new Date().getFullYear()} EventEase. All rights reserved.
-        </p>
-      </footer>
+      <motion.footer
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        className="bg-dark text-white text-center py-4"
+      >
+        <Container>
+          <motion.p whileHover={{ scale: 1.05 }} className="mb-0">
+            &copy; {new Date().getFullYear()} EventEase. All rights reserved.
+          </motion.p>
+        </Container>
+      </motion.footer>
+
+      {/* Custom Styles */}
+      <style jsx>{`
+        .service-image {
+          width: 100%;
+          height: 150px;
+          background-size: cover;
+          background-position: center;
+          transition: transform 0.5s ease;
+        }
+        .service-card:hover .service-image {
+          transform: scale(1.1);
+        }
+        .event-image-wrapper {
+          position: relative;
+          width: 100%;
+          height: 250px;
+          overflow: hidden;
+          border-radius: 10px 10px 0 0;
+        }
+        .event-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.5s ease;
+        }
+        .event-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+        .event-card:hover .event-image {
+          transform: scale(1.1);
+        }
+        .event-caption {
+          background: white;
+          border-radius: 0 0 10px 10px;
+        }
+        .input-field {
+          border-radius: 8px;
+          border: 1px solid #dee2e6;
+          transition: all 0.3s ease;
+        }
+        .input-field:focus {
+          border-color: #6a11cb;
+          box-shadow: 0 0 0 0.25rem rgba(106, 17, 203, 0.25);
+        }
+        .contact-item {
+          display: flex;
+          align-items: center;
+          padding: 10px;
+          border-radius: 8px;
+          transition: all 0.3s ease;
+        }
+        .contact-item:hover {
+          background-color: rgba(106, 17, 203, 0.05);
+        }
+        .quote-icon {
+          position: absolute;
+          top: 20px;
+          right: 20px;
+        }
+      `}</style>
     </>
   );
 };

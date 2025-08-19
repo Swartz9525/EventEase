@@ -1,5 +1,5 @@
 // File: src/pages/ServiceDetail.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Container,
@@ -8,97 +8,75 @@ import {
   Card,
   ListGroup,
   Button,
-  Badge,
   Alert,
+  Spinner,
 } from "react-bootstrap";
-
-const addons = [
-  {
-    name: "Premium Decoration",
-    description: "Elegant floral and lighting design for your venue.",
-    price: 5000,
-    tag: "Popular",
-    icon: "🎀",
-  },
-  {
-    name: "Catering Services",
-    description: "Multi-cuisine buffet with customizable menu.",
-    price: 12000,
-    tag: "Best Value",
-    icon: "🍽️",
-  },
-  {
-    name: "Live Music",
-    description: "Professional band/DJ for entertainment.",
-    price: 7000,
-    icon: "🎵",
-  },
-  {
-    name: "Photography & Videography",
-    description: "Capture every special moment in high quality.",
-    price: 8000,
-    tag: "Highly Rated",
-    icon: "📸",
-  },
-  {
-    name: "Custom Stage Design",
-    description: "Tailored stage with lighting effects and props.",
-    price: 6000,
-    icon: "🎭",
-  },
-  {
-    name: "Event Host / MC",
-    description: "Engaging host to keep the event lively.",
-    price: 3500,
-    icon: "🎤",
-  },
-  {
-    name: "Guest Welcome Kit",
-    description: "Personalized kits with snacks, souvenirs, and brochures.",
-    price: 3000,
-    icon: "🎁",
-  },
-  {
-    name: "LED Screens",
-    description: "Large screens for live visuals and presentations.",
-    price: 9000,
-    icon: "📺",
-  },
-];
+import axios from "axios";
+import { motion } from "framer-motion";
 
 const ServiceDetail = () => {
   const { serviceId } = useParams();
   const navigate = useNavigate();
-  const [selectedAddons, setSelectedAddons] = useState([]);
 
-  const formattedTitle = serviceId.replace(/-/g, " ");
-  const capitalizedTitle = formattedTitle.replace(/\b\w/g, (char) =>
-    char.toUpperCase()
-  );
+  const [subServices, setSubServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedSubServices, setSelectedSubServices] = useState([]);
 
-  const toggleAddon = (addon) => {
-    setSelectedAddons((prev) => {
-      if (prev.includes(addon.name)) {
-        return prev.filter((item) => item !== addon.name);
+  useEffect(() => {
+    fetchSubServices();
+  }, [serviceId]);
+
+  const fetchSubServices = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`http://localhost:5000/api/subservices`);
+      setSubServices(res.data);
+    } catch (err) {
+      setError("Failed to fetch subservices. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleSubService = (sub) => {
+    setSelectedSubServices((prev) => {
+      const exists = prev.find((s) => s._id === sub._id);
+      if (exists) {
+        return prev.filter((s) => s._id !== sub._id);
       } else {
-        return [...prev, addon.name];
+        return [...prev, { ...sub, quantity: 1 }];
       }
     });
   };
 
-  const handleContinue = () => {
-    const selectedDetails = addons.filter((addon) =>
-      selectedAddons.includes(addon.name)
+  const changeQuantity = (subId, delta) => {
+    setSelectedSubServices((prev) =>
+      prev.map((s) =>
+        s._id === subId
+          ? { ...s, quantity: Math.max(1, s.quantity + delta) }
+          : s
+      )
     );
-    localStorage.setItem("selectedAddons", JSON.stringify(selectedDetails));
+  };
+
+  const handleContinue = () => {
+    localStorage.setItem(
+      "selectedSubServices",
+      JSON.stringify(selectedSubServices)
+    );
     localStorage.setItem("totalPrice", total);
     navigate("/payment");
   };
 
-  const total = addons.reduce(
-    (acc, addon) =>
-      selectedAddons.includes(addon.name) ? acc + addon.price : acc,
+  const total = selectedSubServices.reduce(
+    (acc, s) => acc + s.price * s.quantity,
     0
+  );
+
+  const formattedTitle = serviceId.replace(/-/g, " ");
+  const capitalizedTitle = formattedTitle.replace(/\b\w/g, (char) =>
+    char.toUpperCase()
   );
 
   return (
@@ -108,101 +86,151 @@ const ServiceDetail = () => {
           {capitalizedTitle}
         </h1>
         <p className="text-muted fs-5">
-          Personalize your <strong>{capitalizedTitle.toLowerCase()}</strong>{" "}
-          with optional premium services.
+          Customize your <strong>{capitalizedTitle}</strong> with premium
+          services to make it unforgettable!
         </p>
+        <Alert variant="info" className="mt-3">
+          🌟 Tip: Click on any service to add it to your plan. You can adjust
+          quantity for multiple services!
+        </Alert>
       </div>
 
-      <Row>
-        {/* Add-on selection */}
-        <Col lg={8} className="mb-4">
-          <Row className="g-4">
-            {addons.map((addon) => (
-              <Col md={6} key={addon.name}>
-                <Card
-                  className={`addon-card h-100 shadow-sm border-0 p-3 rounded-4 hover-zoom ${
-                    selectedAddons.includes(addon.name) ? "selected-addon" : ""
-                  }`}
-                >
-                  <Card.Body className="d-flex flex-column justify-content-between">
-                    <div>
-                      <div className="d-flex justify-content-between align-items-start mb-2">
-                        <Card.Title className="h5 fw-semibold">
-                          <span className="me-2 fs-4">{addon.icon}</span>
-                          {addon.name}
-                        </Card.Title>
-                        {addon.tag && (
-                          <Badge bg="info" pill>
-                            {addon.tag}
-                          </Badge>
-                        )}
-                      </div>
-                      <Card.Text className="text-muted small">
-                        {addon.description}
-                      </Card.Text>
-                      <ListGroup variant="flush" className="mb-3">
-                        <ListGroup.Item>
-                          <strong>Cost:</strong> ₹{addon.price.toLocaleString()}
-                        </ListGroup.Item>
-                      </ListGroup>
-                    </div>
-                    <Button
-                      variant={
-                        selectedAddons.includes(addon.name)
-                          ? "danger"
-                          : "outline-primary"
-                      }
-                      onClick={() => toggleAddon(addon)}
-                      className="w-100 mt-2"
+      {loading ? (
+        <div className="text-center py-5">
+          <Spinner animation="border" variant="primary" />
+        </div>
+      ) : error ? (
+        <Alert variant="danger" className="text-center">
+          {error}
+        </Alert>
+      ) : (
+        <Row>
+          <Col lg={8} className="mb-4">
+            <Row className="g-4">
+              {subServices.map((sub) => {
+                const selected = selectedSubServices.find(
+                  (s) => s._id === sub._id
+                );
+                return (
+                  <Col md={6} key={sub._id}>
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ type: "spring", stiffness: 300 }}
                     >
-                      {selectedAddons.includes(addon.name)
-                        ? "Remove"
-                        : "Add to Plan"}
-                    </Button>
-                  </Card.Body>
-                </Card>
-              </Col>
-            ))}
-          </Row>
-        </Col>
+                      <Card
+                        className={`h-100 shadow-sm rounded-4 border-hover ${
+                          selected ? "selected-addon" : ""
+                        }`}
+                      >
+                        <Card.Body className="d-flex flex-column justify-content-between">
+                          <div>
+                            <Card.Title className="h5 fw-semibold mb-2">
+                              {sub.title}
+                            </Card.Title>
+                            <Card.Text className="text-muted small mb-3">
+                              {sub.description}
+                            </Card.Text>
+                            <ListGroup variant="flush">
+                              <ListGroup.Item>
+                                <strong>Price:</strong> ₹
+                                {sub.price.toLocaleString()}
+                              </ListGroup.Item>
+                              <ListGroup.Item>
+                                <strong>Available:</strong> {sub.quantity}
+                              </ListGroup.Item>
+                            </ListGroup>
+                          </div>
+                          <div className="mt-3 d-flex gap-2 align-items-center">
+                            {selected && (
+                              <div className="d-flex gap-2 align-items-center">
+                                <Button
+                                  size="sm"
+                                  variant="outline-secondary"
+                                  onClick={() => changeQuantity(sub._id, -1)}
+                                >
+                                  -
+                                </Button>
+                                <span>{selected.quantity}</span>
+                                <Button
+                                  size="sm"
+                                  variant="outline-secondary"
+                                  onClick={() => changeQuantity(sub._id, 1)}
+                                >
+                                  +
+                                </Button>
+                              </div>
+                            )}
+                            <Button
+                              variant={selected ? "danger" : "outline-primary"}
+                              className="flex-grow-1"
+                              onClick={() => toggleSubService(sub)}
+                            >
+                              {selected ? "Remove" : "Add to Plan"}
+                            </Button>
+                          </div>
+                        </Card.Body>
+                      </Card>
+                    </motion.div>
+                  </Col>
+                );
+              })}
+            </Row>
+          </Col>
 
-        {/* Summary sidebar */}
-        <Col lg={4}>
-          <Card
-            className="shadow sticky-top rounded-4 p-3"
-            style={{ top: 100 }}
-          >
-            <Card.Body>
-              <h5 className="fw-bold mb-3 text-secondary">Your Plan Summary</h5>
-              {selectedAddons.length === 0 ? (
-                <Alert variant="light">
-                  You haven’t selected any add-ons yet.
-                </Alert>
-              ) : (
-                <ListGroup className="mb-3">
-                  {selectedAddons.map((name) => (
-                    <ListGroup.Item key={name}>{name}</ListGroup.Item>
-                  ))}
-                </ListGroup>
-              )}
-              <div className="d-flex justify-content-between align-items-center mt-3">
-                <span className="fw-bold">Estimated Total:</span>
-                <span className="fs-5 text-success">
-                  ₹{total.toLocaleString()}
-                </span>
-              </div>
-              <Button
-                variant="primary"
-                className="mt-4 w-100 rounded-pill fw-bold"
-                disabled={selectedAddons.length === 0}
-                onClick={handleContinue}
+          <Col lg={4}>
+            <motion.div
+              initial={{ x: 50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card
+                className="shadow sticky-top rounded-4 p-3"
+                style={{ top: 100 }}
               >
-                Continue to Booking
-              </Button>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+                <Card.Body>
+                  <h5 className="fw-bold mb-3 text-secondary">
+                    Your Plan Summary
+                  </h5>
+                  {selectedSubServices.length === 0 ? (
+                    <Alert variant="light">
+                      You haven’t selected any subservices yet.
+                    </Alert>
+                  ) : (
+                    <ListGroup className="mb-3">
+                      {selectedSubServices.map((s) => (
+                        <ListGroup.Item key={s._id}>
+                          <div className="d-flex justify-content-between">
+                            <div>
+                              {s.title} x {s.quantity}
+                            </div>
+                            <div>
+                              ₹{(s.price * s.quantity).toLocaleString()}
+                            </div>
+                          </div>
+                        </ListGroup.Item>
+                      ))}
+                    </ListGroup>
+                  )}
+                  <div className="d-flex justify-content-between align-items-center mt-3 border-top pt-3">
+                    <span className="fw-bold">Estimated Total:</span>
+                    <span className="fs-5 text-success">
+                      ₹{total.toLocaleString()}
+                    </span>
+                  </div>
+                  <Button
+                    variant="primary"
+                    className="mt-4 w-100 rounded-pill fw-bold"
+                    disabled={selectedSubServices.length === 0}
+                    onClick={handleContinue}
+                  >
+                    Continue to Booking
+                  </Button>
+                </Card.Body>
+              </Card>
+            </motion.div>
+          </Col>
+        </Row>
+      )}
     </Container>
   );
 };

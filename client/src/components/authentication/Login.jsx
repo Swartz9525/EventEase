@@ -11,8 +11,8 @@ import {
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import Confetti from "react-confetti";
-import { jwtDecode } from "jwt-decode";
-import { AuthContext } from "../context/AuthContext"; // ✅ use correct path
+import * as jwtDecode from "jwt-decode"; // ES module import for Vite
+import { AuthContext } from "../context/AuthContext";
 
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -26,23 +26,23 @@ const Login = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useContext(AuthContext); // ✅ use login from context
+  const { login } = useContext(AuthContext);
   const from = location.state?.from?.pathname || "/";
 
+  // Redirect if user already logged in
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (typeof token === "string" && token.trim()) {
-      try {
-        const decoded = jwtDecode(token);
-        if (decoded.exp * 1000 > Date.now()) {
-          navigate(from, { replace: true });
-        }
-      } catch {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-      }
+    const expiry = parseInt(localStorage.getItem("tokenExpiry"), 10);
+
+    if (token && expiry && expiry > Date.now()) {
+      navigate(from, { replace: true });
+    } else {
+      // Expired token cleanup
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("tokenExpiry");
     }
-  }, []);
+  }, [navigate, from]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -65,10 +65,8 @@ const Login = () => {
         throw new Error(data.message || "Login failed");
       }
 
-      // ✅ Save token and full user info in localStorage and context
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      login(data.token, data.user); // ✅ call AuthContext login()
+      // Store token and user with 7-day expiry
+      login(data.token, data.user);
 
       setStatus({ loading: false, error: "", success: true });
       setShowConfetti(true);
