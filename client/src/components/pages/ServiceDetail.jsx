@@ -33,10 +33,11 @@ const ServiceDetail = ({ id: propId }) => {
   const fetchSubServices = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`http://localhost:5000/api/subservices`);
+      const res = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/subservices`
+      );
       console.log("API response:", res.data);
 
-      // ✅ Ensure response is always an array
       const data = Array.isArray(res.data)
         ? res.data
         : Array.isArray(res.data.data)
@@ -47,6 +48,7 @@ const ServiceDetail = ({ id: propId }) => {
     } catch (err) {
       console.error("Error fetching subservices:", err);
       setError("Failed to fetch subservices. Please try again later.");
+      setSubServices([]); // ✅ prevent filter/map crash
     } finally {
       setLoading(false);
     }
