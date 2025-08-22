@@ -9,18 +9,20 @@ import {
   Row,
   Col,
   Button,
+  OverlayTrigger,
+  Tooltip,
 } from "react-bootstrap";
-import { Calendar, Clock, Person, CurrencyRupee } from "react-bootstrap-icons";
+import { Clock, Person, CurrencyRupee, Gear } from "react-bootstrap-icons";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-
-const BACKEND_URL = "http://localhost:5000";
 
 const Profile = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [userEmail, setUserEmail] = useState("");
-  const [expandedBooking, setExpandedBooking] = useState(null); // track expanded card
+  const [expandedBooking, setExpandedBooking] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
@@ -63,9 +65,12 @@ const Profile = () => {
     setError("");
 
     try {
-      const { data } = await axios.get(`${BACKEND_URL}/api/bookings`, {
-        params: { email },
-      });
+      const { data } = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/bookings`,
+        {
+          params: { email },
+        }
+      );
 
       const normalized = normalizeAndSort(data?.bookings || data || []);
       setBookings(normalized);
@@ -122,6 +127,11 @@ const Profile = () => {
     setExpandedBooking(expandedBooking === index ? null : index);
   };
 
+  // ✅ Pass booking details to /event-manage
+  const handleManage = (booking) => {
+    navigate(`/event-manage`, { state: { booking } });
+  };
+
   return (
     <Container className="py-4">
       <Row className="mb-4">
@@ -165,7 +175,7 @@ const Profile = () => {
           const isExpanded = expandedBooking === index;
           return (
             <Card
-              key={index}
+              key={booking._id || index}
               className="mb-4 border-0 shadow-sm overflow-hidden"
             >
               <Card.Header className="bg-light">
@@ -199,6 +209,31 @@ const Profile = () => {
                     >
                       {isExpanded ? "Show Less" : "View Details"}
                     </Button>
+                    <OverlayTrigger
+                      placement="top"
+                      overlay={
+                        booking.status !== "approved" ? (
+                          <Tooltip>
+                            You can manage this event when it is approved.
+                          </Tooltip>
+                        ) : (
+                          <></>
+                        )
+                      }
+                    >
+                      <span className="d-inline-block">
+                        <Button
+                          variant="outline-dark"
+                          size="sm"
+                          className="ms-2"
+                          onClick={() => handleManage(booking)}
+                          disabled={booking.status !== "approved"} // ✅ disable unless approved
+                        >
+                          <Gear className="me-1" size={16} />
+                          Manage
+                        </Button>
+                      </span>
+                    </OverlayTrigger>
                   </div>
                 </div>
               </Card.Header>

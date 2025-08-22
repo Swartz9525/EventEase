@@ -9,7 +9,7 @@ import { FaQuoteLeft } from "react-icons/fa";
 import axios from "axios";
 import "animate.css";
 
-// Static images for Past Events section
+// 🔹 Static images for Past Events
 const staticImages = [
   "https://images.unsplash.com/photo-1504384308090-c894fdcc538d",
   "https://images.unsplash.com/photo-1551836022-4c4c79ecde16",
@@ -19,7 +19,7 @@ const staticImages = [
   "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
 ];
 
-// Animation wrapper
+// 🔹 Reusable animation wrapper
 const AnimatedCard = ({ children }) => {
   const controls = useAnimation();
   const [ref, inView] = useInView();
@@ -47,14 +47,14 @@ const AnimatedCard = ({ children }) => {
 const Home = () => {
   const [services, setServices] = useState([]);
 
-  // Fetch services from backend (first 4)
+  // 🔹 Fetch first 4 services from backend
   useEffect(() => {
     const fetchServices = async () => {
       try {
         const res = await axios.get("http://localhost:5000/api/services");
         setServices(res.data.slice(0, 4));
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching services:", err);
       }
     };
     fetchServices();
@@ -67,10 +67,34 @@ const Home = () => {
 
   return (
     <>
-      {/* Hero Section */}
-      <HeroCarousel />
+      {/* 🔹 Intro Section */}
+      <Container className="py-5 text-center">
+        <motion.h1
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="fw-bold"
+        >
+          Welcome to EventEase
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+          className="lead text-muted mt-3"
+        >
+          EventEase is your one-stop solution for organizing, booking, and
+          managing events effortlessly. From weddings to corporate parties,
+          we’ve got you covered with premium services and seamless experiences.
+        </motion.p>
+      </Container>
 
-      {/* Services Section */}
+      {/* 🔹 Hero Section (short height) */}
+      <div style={{ height: "60vh", overflow: "hidden" }}>
+        <HeroCarousel />
+      </div>
+
+      {/* 🔹 Services Section */}
       <Container className="py-5">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <motion.h2
@@ -87,6 +111,7 @@ const Home = () => {
             </Link>
           </motion.div>
         </div>
+
         <Row>
           {services.map((service, index) => (
             <Col md={3} key={service._id} className="mb-4">
@@ -144,7 +169,7 @@ const Home = () => {
         </Row>
       </Container>
 
-      {/* Past Events Section */}
+      {/* 🔹 Past Events Section */}
       <Container className="py-5 bg-light">
         <motion.h2
           initial={{ opacity: 0 }}
@@ -193,7 +218,7 @@ const Home = () => {
         </Row>
       </Container>
 
-      {/* Testimonials Section */}
+      {/* 🔹 Testimonials Section */}
       <Container className="py-5">
         <motion.h2
           initial={{ opacity: 0 }}
@@ -213,7 +238,7 @@ const Home = () => {
                   transition={{ duration: 0.3 }}
                 >
                   <Card className="h-100 shadow-sm border-0">
-                    <Card.Body className="p-4">
+                    <Card.Body className="p-4 position-relative">
                       <div className="d-flex align-items-center mb-3">
                         <motion.div
                           initial={{ scale: 0 }}
@@ -265,9 +290,10 @@ const Home = () => {
         </Row>
       </Container>
 
-      {/* Contact Section */}
+      {/* 🔹 Contact Section */}
       <Container className="py-5 bg-light">
         <Row>
+          {/* Contact Info */}
           <Col lg={6} className="mb-4 mb-lg-0">
             <AnimatedCard>
               <Card className="h-100 shadow-sm border-0">
@@ -285,33 +311,12 @@ const Home = () => {
                     <FiMapPin className="me-3 text-primary" size={20} />
                     <span>123 Event Street, New York, NY 10001</span>
                   </div>
-                  <motion.div
-                    className="mt-4"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                  >
-                    <h6 className="mb-3">Connect With Us</h6>
-                    <div className="social-icons">
-                      {["facebook", "twitter", "instagram", "linkedin"].map(
-                        (social) => (
-                          <motion.a
-                            key={social}
-                            href="#"
-                            whileHover={{ y: -3 }}
-                            className="me-3 text-dark"
-                          >
-                            <i className={`bi bi-${social}`}></i>
-                          </motion.a>
-                        )
-                      )}
-                    </div>
-                  </motion.div>
                 </Card.Body>
               </Card>
             </AnimatedCard>
           </Col>
 
+          {/* Contact Form */}
           <Col lg={6}>
             <AnimatedCard>
               <motion.div
@@ -377,31 +382,14 @@ const Home = () => {
         </Row>
       </Container>
 
-      {/* Footer */}
-      <motion.footer
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        className="bg-dark text-white text-center py-4"
-      >
-        <Container>
-          <motion.p whileHover={{ scale: 1.05 }} className="mb-0">
-            &copy; {new Date().getFullYear()} EventEase. All rights reserved.
-          </motion.p>
-        </Container>
-      </motion.footer>
-
-      {/* Custom Styles */}
-      <style jsx>{`
+      {/* 🔹 Custom Styles */}
+      <style>{`
         .service-image {
           width: 100%;
           height: 150px;
           background-size: cover;
           background-position: center;
           transition: transform 0.5s ease;
-        }
-        .service-card:hover .service-image {
-          transform: scale(1.1);
         }
         .event-image-wrapper {
           position: relative;
@@ -418,10 +406,7 @@ const Home = () => {
         }
         .event-overlay {
           position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
+          inset: 0;
           background: rgba(0, 0, 0, 0.5);
           display: flex;
           align-items: center;

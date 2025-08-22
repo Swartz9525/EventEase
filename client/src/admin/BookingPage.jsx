@@ -1,542 +1,560 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import {
   Container,
-  Card,
-  Table,
-  Spinner,
-  Alert,
-  Button,
-  Badge,
   Row,
   Col,
+  Card,
+  Badge,
+  Button,
+  Spinner,
   ButtonGroup,
   Dropdown,
+  Alert,
+  Modal,
   Form,
   InputGroup,
-  Pagination,
-  OverlayTrigger,
-  Tooltip,
-  Toast,
-  ToastContainer,
 } from "react-bootstrap";
-import {
-  CheckCircle,
-  XCircle,
-  ClockHistory,
-  Search,
-  Filter,
-  CalendarEvent,
-  Person,
-  CurrencyRupee,
-  ThreeDotsVertical,
-  ArrowClockwise,
-  InfoCircle,
-} from "react-bootstrap-icons";
-import axios from "axios";
-
-const BACKEND_URL = "http://localhost:5000";
 
 const BookingPage = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [retryCount, setRetryCount] = useState(0);
-  const [showUpdateError, setShowUpdateError] = useState(false);
-  const [updateError, setUpdateError] = useState("");
-  const [updatingId, setUpdatingId] = useState(null);
-  const [lastFailedUpdate, setLastFailedUpdate] = useState({
-    id: null,
-    status: null,
-  });
-  const itemsPerPage = 8;
+  const [showModal, setShowModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
 
+  // ✅ Fetch all bookings
   const fetchBookings = async () => {
-    setLoading(true);
-    setError("");
     try {
-      const { data } = await axios.get(`${BACKEND_URL}/api/booking`, {
-        timeout: 5000,
-      });
-      setBookings(data || []);
-      setRetryCount(0);
-      localStorage.setItem("cachedBookings", JSON.stringify(data || []));
+      setLoading(true);
+      setError("");
+      const { data } = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/bookings/all`
+      );
+      setBookings(data);
     } catch (err) {
       console.error("Fetch bookings error:", err);
-      let errorMessage = "Failed to fetch bookings";
-
-      if (err.response) {
-        errorMessage =
-          err.response.data?.message || `Server error: ${err.response.status}`;
-      } else if (err.request) {
-        errorMessage = "No response from server. Please check your connection.";
-      } else if (err.code === "ECONNABORTED") {
-        errorMessage = "Request timed out. Please try again.";
-      }
-
-      setError(errorMessage);
-      const cached = JSON.parse(localStorage.getItem("cachedBookings")) || [];
-      if (cached.length) setBookings(cached);
+      setError("Failed to load bookings. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const updateStatus = async (id, status) => {
-    setUpdatingId(id);
+  // ✅ Update booking status and refresh
+  const handleStatusUpdate = async (id, newStatus) => {
     try {
-      const { data } = await axios.put(
-        `${BACKEND_URL}/api/booking/${id}/status`,
-        { status }
+      setStatusUpdateLoading(true);
+      await axios.put(
+        `${import.meta.env.VITE_BACKEND_URL}/api/bookings/${id}/status`,
+        { status: newStatus }
       );
-
-      const updatedBookings = bookings.map((b) =>
-        b._id === id ? { ...b, status: data.status } : b
-      );
-
-      setBookings(updatedBookings);
-      localStorage.setItem("cachedBookings", JSON.stringify(updatedBookings));
-      return true;
+      fetchBookings(); // refresh after update
     } catch (err) {
       console.error("Update status error:", err);
-      const errorMsg =
-        err.response?.data?.message || "Failed to update booking status";
-      setUpdateError(errorMsg);
-      setShowUpdateError(true);
-      setLastFailedUpdate({ id, status });
-      return false;
+      setError("Failed to update booking status.");
     } finally {
-      setUpdatingId(null);
+      setStatusUpdateLoading(false);
     }
   };
 
-  const handleStatusUpdate = async (id, status) => {
-    const originalBookings = [...bookings];
-    const updatedBookings = bookings.map((b) =>
-      b._id === id ? { ...b, status } : b
-    );
-
-    setBookings(updatedBookings);
-
-    const success = await updateStatus(id, status);
-    if (!success) {
-      setBookings(originalBookings);
-    }
-  };
-
-  const formatDate = (dateString, options = {}) => {
-    if (!dateString) return null;
-
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return (
-        <span className="text-danger">
-          Invalid date
-          <OverlayTrigger
-            placement="top"
-            overlay={<Tooltip>Original value: {dateString}</Tooltip>}
-          >
-            <InfoCircle className="ms-1" size={14} />
-          </OverlayTrigger>
-        </span>
-      );
-    }
-
-    return date.toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      ...options,
-    });
-  };
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "approved":
-        return (
-          <Badge bg="success" className="d-flex align-items-center">
-            <CheckCircle className="me-1" size={14} />
-            Approved
-          </Badge>
-        );
-      case "rejected":
-        return (
-          <Badge bg="danger" className="d-flex align-items-center">
-            <XCircle className="me-1" size={14} />
-            Rejected
-          </Badge>
-        );
-      case "pending":
-      default:
-        return (
-          <Badge bg="warning" className="d-flex align-items-center text-dark">
-            <ClockHistory className="me-1" size={14} />
-            Pending
-          </Badge>
-        );
-    }
-  };
-
-  const handleRetry = () => {
-    const delay = Math.min(1000 * 2 ** retryCount, 30000);
-    setTimeout(() => {
-      setRetryCount((prev) => prev + 1);
-      fetchBookings();
-    }, delay);
-  };
-
-  const handleRetryFailedUpdate = () => {
-    setShowUpdateError(false);
-    if (lastFailedUpdate.id && lastFailedUpdate.status) {
-      handleStatusUpdate(lastFailedUpdate.id, lastFailedUpdate.status);
-    }
+  // ✅ View booking details
+  const handleViewDetails = (booking) => {
+    setSelectedBooking(booking);
+    setShowModal(true);
   };
 
   useEffect(() => {
-    const cached = JSON.parse(localStorage.getItem("cachedBookings")) || [];
-    if (cached.length) setBookings(cached);
     fetchBookings();
-
-    const handleOnline = () => {
-      if (error && navigator.onLine) {
-        handleRetry();
-      }
-    };
-
-    window.addEventListener("online", handleOnline);
-    return () => window.removeEventListener("online", handleOnline);
   }, []);
 
+  // ✅ Filter and sort bookings
   const filteredBookings = bookings
     .filter((booking) => {
-      const matchesSearch = booking.email
-        ?.toLowerCase()
-        ?.includes(searchTerm.toLowerCase());
-      const matchesStatus =
-        statusFilter === "all" || booking.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      if (filter === "all") return true;
+      return booking.status === filter;
     })
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    .filter((booking) => {
+      if (!searchTerm) return true;
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        booking.email.toLowerCase().includes(searchLower) ||
+        (booking.bookingId &&
+          booking.bookingId.toLowerCase().includes(searchLower)) ||
+        (booking._id && booking._id.toLowerCase().includes(searchLower)) ||
+        booking.services.some((service) =>
+          service.name.toLowerCase().includes(searchLower)
+        )
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === "newest") {
+        return (
+          new Date(b.createdAt || b.bookingDate) -
+          new Date(a.createdAt || a.bookingDate)
+        );
+      } else if (sortBy === "oldest") {
+        return (
+          new Date(a.createdAt || a.bookingDate) -
+          new Date(b.createdAt || b.bookingDate)
+        );
+      } else if (sortBy === "highest") {
+        return b.total - a.total;
+      } else if (sortBy === "lowest") {
+        return a.total - b.total;
+      }
+      return 0;
+    });
 
-  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
-  const paginatedBookings = filteredBookings.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // ✅ Get badge variant based on status
+  const getStatusVariant = (status) => {
+    switch (status) {
+      case "approved":
+        return "success";
+      case "pending":
+        return "warning";
+      case "rejected":
+        return "danger";
+      default:
+        return "secondary";
+    }
+  };
 
-  if (loading && !bookings.length) {
-    return (
-      <Container className="py-5 text-center">
-        <Spinner animation="border" variant="primary" />
-        <p className="mt-3">Loading bookings...</p>
-      </Container>
-    );
-  }
-
-  if (error && !bookings.length) {
-    return (
-      <Container className="py-5">
-        <Alert variant="danger" className="text-center">
-          <h5>Could not load bookings</h5>
-          <p>{error}</p>
-          <div className="d-flex justify-content-center gap-2 mt-3">
-            <Button variant="primary" onClick={handleRetry}>
-              <ArrowClockwise className="me-1" />
-              {retryCount > 0 ? `Try again (${retryCount})` : "Retry"}
-            </Button>
-          </div>
-        </Alert>
-      </Container>
-    );
-  }
+  // ✅ Format currency
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(amount);
+  };
 
   return (
-    <Container className="py-4">
-      <ToastContainer position="top-end" className="p-3">
-        <Toast
-          show={showUpdateError}
-          onClose={() => setShowUpdateError(false)}
-          delay={5000}
-          autohide
-          bg="danger"
-        >
-          <Toast.Header>
-            <strong className="me-auto">Update Failed</strong>
-          </Toast.Header>
-          <Toast.Body className="text-white">
-            <div>{updateError} - Showing cached data</div>
-            <Button
-              variant="light"
-              size="sm"
-              className="mt-2"
-              onClick={handleRetryFailedUpdate}
-            >
-              Retry Update
-            </Button>
-          </Toast.Body>
-        </Toast>
-      </ToastContainer>
+    <Container fluid className="py-4">
+      {/* Header Section */}
+      <Row className="mb-4 align-items-center">
+        <Col>
+          <h2 className="mb-1 fw-bold text-primary">Booking Management</h2>
+          <p className="text-muted mb-0">
+            Manage and track all customer bookings
+          </p>
+        </Col>
+        <Col xs="auto">
+          <Button variant="primary" onClick={fetchBookings} disabled={loading}>
+            {loading ? <Spinner animation="border" size="sm" /> : "🔄 Refresh"}
+          </Button>
+        </Col>
+      </Row>
 
-      <Card className="border-0 shadow-sm">
-        <Card.Header className="bg-white py-3">
-          <Row className="align-items-center">
-            <Col md={6}>
-              <h5 className="mb-0 d-flex align-items-center">
-                <CalendarEvent className="me-2" size={20} />
-                Booking Management
-              </h5>
-            </Col>
-            <Col md={6} className="text-md-end">
-              <Button
-                variant="outline-primary"
-                size="sm"
-                onClick={fetchBookings}
-                className="me-2"
-                disabled={loading}
-              >
-                <ArrowClockwise size={16} />
-              </Button>
-              <Dropdown className="d-inline-block me-2">
-                <Dropdown.Toggle variant="outline-secondary" size="sm">
-                  <Filter className="me-1" size={16} />
-                  Status: {statusFilter === "all" ? "All" : statusFilter}
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  <Dropdown.Item onClick={() => setStatusFilter("all")}>
+      {/* Filters and Search */}
+      <Card className="shadow-sm border-0 mb-4">
+        <Card.Body className="p-3">
+          <Row className="g-3">
+            <Col md={6} lg={4}>
+              <Form.Group>
+                <Form.Label className="fw-medium">Filter by Status</Form.Label>
+                <ButtonGroup className="w-100">
+                  <Button
+                    variant={filter === "all" ? "dark" : "outline-dark"}
+                    onClick={() => setFilter("all")}
+                    size="sm"
+                  >
                     All
-                  </Dropdown.Item>
-                  <Dropdown.Item onClick={() => setStatusFilter("pending")}>
+                  </Button>
+                  <Button
+                    variant={
+                      filter === "pending" ? "warning" : "outline-warning"
+                    }
+                    onClick={() => setFilter("pending")}
+                    size="sm"
+                  >
                     Pending
-                  </Dropdown.Item>
-                  <Dropdown.Item onClick={() => setStatusFilter("approved")}>
+                  </Button>
+                  <Button
+                    variant={
+                      filter === "approved" ? "success" : "outline-success"
+                    }
+                    onClick={() => setFilter("approved")}
+                    size="sm"
+                  >
                     Approved
-                  </Dropdown.Item>
-                  <Dropdown.Item onClick={() => setStatusFilter("rejected")}>
+                  </Button>
+                  <Button
+                    variant={
+                      filter === "rejected" ? "danger" : "outline-danger"
+                    }
+                    onClick={() => setFilter("rejected")}
+                    size="sm"
+                  >
                     Rejected
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-              <InputGroup style={{ width: "200px" }}>
-                <Form.Control
-                  placeholder="Search email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  </Button>
+                </ButtonGroup>
+              </Form.Group>
+            </Col>
+            <Col md={6} lg={4}>
+              <Form.Group>
+                <Form.Label className="fw-medium">Sort By</Form.Label>
+                <Form.Select
                   size="sm"
-                />
-                <Button variant="outline-secondary" size="sm">
-                  <Search size={16} />
-                </Button>
-              </InputGroup>
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="highest">Highest Amount</option>
+                  <option value="lowest">Lowest Amount</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={12} lg={4}>
+              <Form.Group>
+                <Form.Label className="fw-medium">Search Bookings</Form.Label>
+                <InputGroup size="sm">
+                  <Form.Control
+                    type="text"
+                    placeholder="Search by email, ID, or service..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  {searchTerm && (
+                    <Button
+                      variant="outline-secondary"
+                      onClick={() => setSearchTerm("")}
+                    >
+                      ✕
+                    </Button>
+                  )}
+                </InputGroup>
+              </Form.Group>
             </Col>
           </Row>
-        </Card.Header>
-
-        {error && bookings.length > 0 && (
-          <Alert variant="warning" className="mb-0 rounded-0">
-            {error} - Showing cached data
-          </Alert>
-        )}
-
-        <Card.Body className="p-0">
-          {filteredBookings.length === 0 ? (
-            <div className="text-center py-5">
-              <img
-                src="https://cdn-icons-png.flaticon.com/512/4076/4076478.png"
-                alt="No bookings"
-                width="100"
-                className="opacity-50 mb-3"
-              />
-              <h5 className="text-muted">No bookings found</h5>
-              <p className="text-muted">
-                {searchTerm || statusFilter !== "all"
-                  ? "Try adjusting your search or filter"
-                  : "No bookings have been made yet"}
-              </p>
-            </div>
-          ) : (
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead className="bg-light">
-                  <tr>
-                    <th>#</th>
-                    <th>
-                      <Person className="me-1" size={16} />
-                      User
-                    </th>
-                    <th>Services</th>
-                    <th>
-                      <CurrencyRupee className="me-1" size={16} />
-                      Amount
-                    </th>
-                    <th>Event Date</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedBookings.map((booking, index) => {
-                    const bookingDate = formatDate(booking.createdAt);
-                    const eventDate = formatDate(booking.eventDate);
-                    const isUpcoming =
-                      booking.eventDate &&
-                      new Date(booking.eventDate) > new Date();
-
-                    return (
-                      <tr key={booking._id}>
-                        <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                        <td>
-                          <div className="fw-medium">{booking.email}</div>
-                          {bookingDate && (
-                            <small className="text-muted">{bookingDate}</small>
-                          )}
-                        </td>
-                        <td>
-                          <div className="d-flex flex-column gap-1">
-                            {booking.services?.map((service, i) => (
-                              <div
-                                key={i}
-                                className="d-flex align-items-center"
-                              >
-                                <span className="me-2">
-                                  {service.name || "Unnamed Service"}
-                                </span>
-                                <Badge
-                                  bg="light"
-                                  text="dark"
-                                  className="border"
-                                >
-                                  {service.quantity || 1} × ₹
-                                  {service.price || 0}
-                                </Badge>
-                              </div>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="fw-bold">
-                          ₹{booking.total?.toLocaleString()}
-                        </td>
-                        <td>
-                          {eventDate || "Not specified"}
-                          {eventDate && (
-                            <small
-                              className={`d-block text-${
-                                isUpcoming ? "success" : "muted"
-                              }`}
-                            >
-                              {isUpcoming ? "Upcoming" : "Past"}
-                            </small>
-                          )}
-                        </td>
-                        <td>{getStatusBadge(booking.status)}</td>
-                        <td>
-                          {booking.status === "pending" ? (
-                            <ButtonGroup size="sm">
-                              <Button
-                                variant="outline-success"
-                                onClick={() =>
-                                  handleStatusUpdate(booking._id, "approved")
-                                }
-                                disabled={updatingId === booking._id}
-                              >
-                                {updatingId === booking._id ? (
-                                  <Spinner size="sm" animation="border" />
-                                ) : (
-                                  "Approve"
-                                )}
-                              </Button>
-                              <Button
-                                variant="outline-danger"
-                                onClick={() =>
-                                  handleStatusUpdate(booking._id, "rejected")
-                                }
-                                disabled={updatingId === booking._id}
-                              >
-                                {updatingId === booking._id ? (
-                                  <Spinner size="sm" animation="border" />
-                                ) : (
-                                  "Reject"
-                                )}
-                              </Button>
-                            </ButtonGroup>
-                          ) : (
-                            <Dropdown>
-                              <Dropdown.Toggle
-                                variant="light"
-                                size="sm"
-                                className="border-0"
-                              >
-                                <ThreeDotsVertical />
-                              </Dropdown.Toggle>
-                              <Dropdown.Menu>
-                                <Dropdown.Item
-                                  onClick={() =>
-                                    handleStatusUpdate(booking._id, "pending")
-                                  }
-                                >
-                                  Set as Pending
-                                </Dropdown.Item>
-                                <Dropdown.Item
-                                  onClick={() =>
-                                    handleStatusUpdate(booking._id, "approved")
-                                  }
-                                >
-                                  Approve
-                                </Dropdown.Item>
-                                <Dropdown.Item
-                                  onClick={() =>
-                                    handleStatusUpdate(booking._id, "rejected")
-                                  }
-                                >
-                                  Reject
-                                </Dropdown.Item>
-                              </Dropdown.Menu>
-                            </Dropdown>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
-            </div>
-          )}
         </Card.Body>
-
-        {totalPages > 1 && (
-          <Card.Footer className="bg-white border-top">
-            <div className="d-flex justify-content-between align-items-center">
-              <div className="text-muted small">
-                Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                {Math.min(currentPage * itemsPerPage, filteredBookings.length)}{" "}
-                of {filteredBookings.length} bookings
-              </div>
-              <Pagination className="mb-0">
-                <Pagination.Prev
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                />
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <Pagination.Item
-                    key={i + 1}
-                    active={i + 1 === currentPage}
-                    onClick={() => setCurrentPage(i + 1)}
-                  >
-                    {i + 1}
-                  </Pagination.Item>
-                ))}
-                <Pagination.Next
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                />
-              </Pagination>
-            </div>
-          </Card.Footer>
-        )}
       </Card>
+
+      {/* Error Alert */}
+      {error && (
+        <Alert
+          variant="danger"
+          className="mb-4"
+          dismissible
+          onClose={() => setError("")}
+        >
+          {error}
+        </Alert>
+      )}
+
+      {/* Stats Summary */}
+      <Row className="mb-4">
+        <Col xl={3} md={6} className="mb-3">
+          <Card className="border-0 bg-primary bg-opacity-10">
+            <Card.Body className="p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 className="card-title text-muted mb-1">Total Bookings</h6>
+                  <h4 className="fw-bold mb-0">{bookings.length}</h4>
+                </div>
+                <div className="icon-shape bg-primary text-white rounded-circle p-3">
+                  <i className="bi bi-receipt fs-4"></i>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col xl={3} md={6} className="mb-3">
+          <Card className="border-0 bg-success bg-opacity-10">
+            <Card.Body className="p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 className="card-title text-muted mb-1">Approved</h6>
+                  <h4 className="fw-bold mb-0">
+                    {bookings.filter((b) => b.status === "approved").length}
+                  </h4>
+                </div>
+                <div className="icon-shape bg-success text-white rounded-circle p-3">
+                  <i className="bi bi-check-circle fs-4"></i>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col xl={3} md={6} className="mb-3">
+          <Card className="border-0 bg-warning bg-opacity-10">
+            <Card.Body className="p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 className="card-title text-muted mb-1">Pending</h6>
+                  <h4 className="fw-bold mb-0">
+                    {bookings.filter((b) => b.status === "pending").length}
+                  </h4>
+                </div>
+                <div className="icon-shape bg-warning text-white rounded-circle p-3">
+                  <i className="bi bi-clock fs-4"></i>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col xl={3} md={6} className="mb-3">
+          <Card className="border-0 bg-danger bg-opacity-10">
+            <Card.Body className="p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 className="card-title text-muted mb-1">Rejected</h6>
+                  <h4 className="fw-bold mb-0">
+                    {bookings.filter((b) => b.status === "rejected").length}
+                  </h4>
+                </div>
+                <div className="icon-shape bg-danger text-white rounded-circle p-3">
+                  <i className="bi bi-x-circle fs-4"></i>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Bookings List */}
+      {loading ? (
+        <div className="text-center py-5">
+          <Spinner animation="border" variant="primary" />
+          <p className="mt-2 text-muted">Loading bookings...</p>
+        </div>
+      ) : (
+        <>
+          {filteredBookings.length === 0 ? (
+            <Card className="text-center py-5 border-0 shadow-sm">
+              <Card.Body>
+                <i className="bi bi-inbox display-4 text-muted"></i>
+                <h5 className="mt-3 text-muted">No bookings found</h5>
+                <p className="text-muted">
+                  {searchTerm || filter !== "all"
+                    ? "Try adjusting your search or filter criteria"
+                    : "No bookings have been made yet"}
+                </p>
+              </Card.Body>
+            </Card>
+          ) : (
+            <Row>
+              {filteredBookings.map((booking) => (
+                <Col
+                  xl={4}
+                  lg={6}
+                  key={booking._id || booking.bookingId}
+                  className="mb-4"
+                >
+                  <Card className="h-100 shadow-sm border-0">
+                    <Card.Body className="p-4">
+                      <div className="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                          <h5 className="card-title mb-1">
+                            Booking #
+                            {booking.bookingId ||
+                              booking._id.slice(-6).toUpperCase()}
+                          </h5>
+                          <Badge
+                            bg={getStatusVariant(booking.status)}
+                            className="mt-1"
+                          >
+                            {booking.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <div className="text-end">
+                          <div className="fw-bold text-primary fs-5">
+                            {formatCurrency(booking.total)}
+                          </div>
+                          <small className="text-muted">
+                            {new Date(booking.eventDate).toLocaleDateString()}
+                          </small>
+                        </div>
+                      </div>
+
+                      <div className="mb-3">
+                        <div className="d-flex align-items-center mb-2">
+                          <i className="bi bi-envelope me-2 text-muted"></i>
+                          <span className="text-truncate">{booking.email}</span>
+                        </div>
+                        {booking.phone && (
+                          <div className="d-flex align-items-center mb-2">
+                            <i className="bi bi-telephone me-2 text-muted"></i>
+                            <span>{booking.phone}</span>
+                          </div>
+                        )}
+                        <div className="d-flex align-items-center">
+                          <i className="bi bi-calendar-event me-2 text-muted"></i>
+                          <span>
+                            Event:{" "}
+                            {new Date(booking.eventDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mb-3">
+                        <h6 className="fw-medium mb-2">Services:</h6>
+                        <div className="bg-light p-2 rounded">
+                          {booking.services.map((service, i) => (
+                            <div
+                              key={`${booking._id}-${service.name}-${i}`}
+                              className="d-flex justify-content-between py-1"
+                            >
+                              <span>
+                                {service.name} × {service.quantity}
+                              </span>
+                              <span className="fw-medium">
+                                {formatCurrency(service.price)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="d-flex gap-2 flex-wrap">
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={() => handleViewDetails(booking)}
+                        >
+                          <i className="bi bi-eye me-1"></i> Details
+                        </Button>
+                        <Dropdown>
+                          <Dropdown.Toggle
+                            variant="outline-secondary"
+                            size="sm"
+                            id="dropdown-status"
+                            disabled={statusUpdateLoading}
+                          >
+                            <i className="bi bi-pencil me-1"></i> Change Status
+                          </Dropdown.Toggle>
+                          <Dropdown.Menu>
+                            <Dropdown.Item
+                              onClick={() =>
+                                handleStatusUpdate(booking._id, "approved")
+                              }
+                            >
+                              <i className="bi bi-check-circle text-success me-2"></i>{" "}
+                              Approve
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() =>
+                                handleStatusUpdate(booking._id, "pending")
+                              }
+                            >
+                              <i className="bi bi-clock text-warning me-2"></i>{" "}
+                              Set Pending
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() =>
+                                handleStatusUpdate(booking._id, "rejected")
+                              }
+                            >
+                              <i className="bi bi-x-circle text-danger me-2"></i>{" "}
+                              Reject
+                            </Dropdown.Item>
+                          </Dropdown.Menu>
+                        </Dropdown>
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          )}
+        </>
+      )}
+
+      {/* Booking Detail Modal */}
+      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>
+            Booking Details #
+            {selectedBooking?.bookingId ||
+              selectedBooking?._id.slice(-6).toUpperCase()}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedBooking && (
+            <>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <h6 className="fw-medium">Customer Information</h6>
+                  <p className="mb-1">
+                    <i className="bi bi-envelope me-2 text-muted"></i>
+                    {selectedBooking.email}
+                  </p>
+                  {selectedBooking.phone && (
+                    <p className="mb-1">
+                      <i className="bi bi-telephone me-2 text-muted"></i>
+                      {selectedBooking.phone}
+                    </p>
+                  )}
+                  <p className="mb-0">
+                    <i className="bi bi-calendar-event me-2 text-muted"></i>
+                    Event Date:{" "}
+                    {new Date(selectedBooking.eventDate).toLocaleDateString()}
+                  </p>
+                </Col>
+                <Col md={6}>
+                  <h6 className="fw-medium">Booking Information</h6>
+                  <p className="mb-1">
+                    Status:{" "}
+                    <Badge bg={getStatusVariant(selectedBooking.status)}>
+                      {selectedBooking.status.toUpperCase()}
+                    </Badge>
+                  </p>
+                  <p className="mb-1">
+                    Created:{" "}
+                    {new Date(
+                      selectedBooking.createdAt || selectedBooking.date
+                    ).toLocaleDateString()}
+                  </p>
+                  <p className="mb-0 fw-bold text-primary">
+                    Total: {formatCurrency(selectedBooking.total)}
+                  </p>
+                </Col>
+              </Row>
+
+              <h6 className="fw-medium mt-4">Services Booked</h6>
+              <div className="bg-light p-3 rounded">
+                {selectedBooking.services.map((service, i) => (
+                  <div
+                    key={i}
+                    className="d-flex justify-content-between align-items-center py-2 border-bottom"
+                  >
+                    <div>
+                      <div className="fw-medium">{service.name}</div>
+                      <small className="text-muted">
+                        Quantity: {service.quantity}
+                      </small>
+                    </div>
+                    <div className="fw-medium">
+                      {formatCurrency(service.price)}
+                    </div>
+                  </div>
+                ))}
+                <div className="d-flex justify-content-between align-items-center pt-2 fw-bold">
+                  <div>Total Amount:</div>
+                  <div>{formatCurrency(selectedBooking.total)}</div>
+                </div>
+              </div>
+
+              {selectedBooking.message && (
+                <>
+                  <h6 className="fw-medium mt-4">Customer Message</h6>
+                  <div className="bg-light p-3 rounded">
+                    {selectedBooking.message}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowModal(false)}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 };

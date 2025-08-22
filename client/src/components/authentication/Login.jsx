@@ -1,3 +1,4 @@
+// File: src/components/authentication/Login.jsx
 import React, { useEffect, useState, useContext } from "react";
 import {
   Container,
@@ -11,7 +12,6 @@ import {
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import Confetti from "react-confetti";
-import * as jwtDecode from "jwt-decode"; // ES module import for Vite
 import { AuthContext } from "../context/AuthContext";
 
 const Login = () => {
@@ -72,7 +72,12 @@ const Login = () => {
       setShowConfetti(true);
 
       setTimeout(() => {
-        navigate(from, { replace: true });
+        // ✅ If admin, redirect to /admin
+        if (data.user.email === "admin@admin.com") {
+          navigate("/admin", { replace: true });
+        } else {
+          navigate(from, { replace: true });
+        }
       }, 2000);
     } catch (err) {
       setStatus({ loading: false, error: err.message, success: false });

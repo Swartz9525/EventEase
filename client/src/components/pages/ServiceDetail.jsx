@@ -14,9 +14,12 @@ import {
 import axios from "axios";
 import { motion } from "framer-motion";
 
-const ServiceDetail = () => {
-  const { serviceId } = useParams();
+const ServiceDetail = ({ id: propId }) => {
+  const { serviceId: paramId } = useParams() || {};
   const navigate = useNavigate();
+
+  // Prefer prop > param > fallback
+  const serviceId = propId || paramId || "default-service";
 
   const [subServices, setSubServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +69,8 @@ const ServiceDetail = () => {
       JSON.stringify(selectedSubServices)
     );
     localStorage.setItem("totalPrice", total);
-    navigate("/payment");
+    // ✅ Correct navigation with actual serviceId
+    navigate(`/services/${serviceId}/payment`);
   };
 
   const total = selectedSubServices.reduce(
@@ -74,7 +78,8 @@ const ServiceDetail = () => {
     0
   );
 
-  const formattedTitle = serviceId.replace(/-/g, " ");
+  // ✅ Safe string transformation
+  const formattedTitle = serviceId?.replace(/-/g, " ") || "Service";
   const capitalizedTitle = formattedTitle.replace(/\b\w/g, (char) =>
     char.toUpperCase()
   );

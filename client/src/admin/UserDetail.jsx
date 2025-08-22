@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Container, Table, Spinner, Alert } from "react-bootstrap";
 import axios from "axios";
 
-const BACKEND_URL = "http://localhost:5000";
+// ✅ use import.meta.env instead of process.env
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
 const UserDetail = () => {
   const [users, setUsers] = useState([]);

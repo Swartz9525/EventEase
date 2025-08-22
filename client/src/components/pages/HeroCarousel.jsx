@@ -3,15 +3,15 @@ import React from "react";
 import { Carousel } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./HeroCarousel.css";
-import wedding from "../../assets/elegantWedding.jpg";
+import fashionShow from "../../assets/fashion_show.jpeg";
 import corporate from "../../assets/splash1.jpg";
-import birthday from "../../assets/splash2.jpg";
+import workshop from "../../assets/workshop.jpeg";
 
 const slides = [
   {
-    image: wedding,
-    title: "Elegant Weddings",
-    description: "Crafting unforgettable moments with precision and style.",
+    image: fashionShow,
+    title: "Fashion Show Extravaganza",
+    description: "Experience the glamour and excitement of our fashion shows.",
   },
   {
     image: corporate,
@@ -19,9 +19,9 @@ const slides = [
     description: "Professional setups that impress and deliver impact.",
   },
   {
-    image: birthday,
-    title: "Vibrant Birthdays",
-    description: "From themes to thrills, we bring the party to life.",
+    image: workshop,
+    title: "Creative Workshops",
+    description: "Hands-on experiences that inspire and engage.",
   },
 ];
 
