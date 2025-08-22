@@ -34,8 +34,18 @@ const ServiceDetail = ({ id: propId }) => {
     try {
       setLoading(true);
       const res = await axios.get(`http://localhost:5000/api/subservices`);
-      setSubServices(res.data);
+      console.log("API response:", res.data);
+
+      // ✅ Ensure response is always an array
+      const data = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data.data)
+        ? res.data.data
+        : [];
+
+      setSubServices(data);
     } catch (err) {
+      console.error("Error fetching subservices:", err);
       setError("Failed to fetch subservices. Please try again later.");
     } finally {
       setLoading(false);
@@ -69,7 +79,6 @@ const ServiceDetail = ({ id: propId }) => {
       JSON.stringify(selectedSubServices)
     );
     localStorage.setItem("totalPrice", total);
-    // ✅ Correct navigation with actual serviceId
     navigate(`/services/${serviceId}/payment`);
   };
 
@@ -78,7 +87,6 @@ const ServiceDetail = ({ id: propId }) => {
     0
   );
 
-  // ✅ Safe string transformation
   const formattedTitle = serviceId?.replace(/-/g, " ") || "Service";
   const capitalizedTitle = formattedTitle.replace(/\b\w/g, (char) =>
     char.toUpperCase()
@@ -112,73 +120,81 @@ const ServiceDetail = ({ id: propId }) => {
         <Row>
           <Col lg={8} className="mb-4">
             <Row className="g-4">
-              {subServices.map((sub) => {
-                const selected = selectedSubServices.find(
-                  (s) => s._id === sub._id
-                );
-                return (
-                  <Col md={6} key={sub._id}>
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ type: "spring", stiffness: 300 }}
-                    >
-                      <Card
-                        className={`h-100 shadow-sm rounded-4 border-hover ${
-                          selected ? "selected-addon" : ""
-                        }`}
+              {Array.isArray(subServices) && subServices.length > 0 ? (
+                subServices.map((sub) => {
+                  const selected = selectedSubServices.find(
+                    (s) => s._id === sub._id
+                  );
+                  return (
+                    <Col md={6} key={sub._id}>
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        transition={{ type: "spring", stiffness: 300 }}
                       >
-                        <Card.Body className="d-flex flex-column justify-content-between">
-                          <div>
-                            <Card.Title className="h5 fw-semibold mb-2">
-                              {sub.title}
-                            </Card.Title>
-                            <Card.Text className="text-muted small mb-3">
-                              {sub.description}
-                            </Card.Text>
-                            <ListGroup variant="flush">
-                              <ListGroup.Item>
-                                <strong>Price:</strong> ₹
-                                {sub.price.toLocaleString()}
-                              </ListGroup.Item>
-                              <ListGroup.Item>
-                                <strong>Available:</strong> {sub.quantity}
-                              </ListGroup.Item>
-                            </ListGroup>
-                          </div>
-                          <div className="mt-3 d-flex gap-2 align-items-center">
-                            {selected && (
-                              <div className="d-flex gap-2 align-items-center">
-                                <Button
-                                  size="sm"
-                                  variant="outline-secondary"
-                                  onClick={() => changeQuantity(sub._id, -1)}
-                                >
-                                  -
-                                </Button>
-                                <span>{selected.quantity}</span>
-                                <Button
-                                  size="sm"
-                                  variant="outline-secondary"
-                                  onClick={() => changeQuantity(sub._id, 1)}
-                                >
-                                  +
-                                </Button>
-                              </div>
-                            )}
-                            <Button
-                              variant={selected ? "danger" : "outline-primary"}
-                              className="flex-grow-1"
-                              onClick={() => toggleSubService(sub)}
-                            >
-                              {selected ? "Remove" : "Add to Plan"}
-                            </Button>
-                          </div>
-                        </Card.Body>
-                      </Card>
-                    </motion.div>
-                  </Col>
-                );
-              })}
+                        <Card
+                          className={`h-100 shadow-sm rounded-4 border-hover ${
+                            selected ? "selected-addon" : ""
+                          }`}
+                        >
+                          <Card.Body className="d-flex flex-column justify-content-between">
+                            <div>
+                              <Card.Title className="h5 fw-semibold mb-2">
+                                {sub.title}
+                              </Card.Title>
+                              <Card.Text className="text-muted small mb-3">
+                                {sub.description}
+                              </Card.Text>
+                              <ListGroup variant="flush">
+                                <ListGroup.Item>
+                                  <strong>Price:</strong> ₹
+                                  {sub.price?.toLocaleString()}
+                                </ListGroup.Item>
+                                <ListGroup.Item>
+                                  <strong>Available:</strong> {sub.quantity}
+                                </ListGroup.Item>
+                              </ListGroup>
+                            </div>
+                            <div className="mt-3 d-flex gap-2 align-items-center">
+                              {selected && (
+                                <div className="d-flex gap-2 align-items-center">
+                                  <Button
+                                    size="sm"
+                                    variant="outline-secondary"
+                                    onClick={() => changeQuantity(sub._id, -1)}
+                                  >
+                                    -
+                                  </Button>
+                                  <span>{selected.quantity}</span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline-secondary"
+                                    onClick={() => changeQuantity(sub._id, 1)}
+                                  >
+                                    +
+                                  </Button>
+                                </div>
+                              )}
+                              <Button
+                                variant={
+                                  selected ? "danger" : "outline-primary"
+                                }
+                                className="flex-grow-1"
+                                onClick={() => toggleSubService(sub)}
+                              >
+                                {selected ? "Remove" : "Add to Plan"}
+                              </Button>
+                            </div>
+                          </Card.Body>
+                        </Card>
+                      </motion.div>
+                    </Col>
+                  );
+                })
+              ) : (
+                <Alert variant="light" className="text-center">
+                  No subservices found for this service.
+                </Alert>
+              )}
             </Row>
           </Col>
 
