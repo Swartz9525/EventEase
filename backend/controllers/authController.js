@@ -7,6 +7,8 @@ const path = require("path");
 const Service = require("../models/Service");
 const SubService = require("../models/SubServices");
 const Booking = require("../models/Booking");
+const Razorpay = require("razorpay");
+const crypto = require("crypto");
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 const REFRESH_SECRET = process.env.REFRESH_SECRET || "your_refresh_secret";
@@ -373,22 +375,29 @@ const updateBookingStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!["approved", "rejected"].includes(status)) {
-      return res.status(400).json({ message: "Invalid status" });
+    // Allow all valid statuses from schema
+    if (!["pending", "approved", "rejected", "cancelled"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
     }
 
     const booking = await Booking.findById(id);
-    if (!booking) return res.status(404).json({ message: "Booking not found" });
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
 
     booking.status = status;
     await booking.save();
 
-    res.json({ message: "Booking status updated", booking });
+    res.json({
+      message: `Booking status updated to '${status}'`,
+      booking,
+    });
   } catch (err) {
     console.error("Update booking status error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 const getAllUsers = async (req, res) => {
   try {
@@ -399,6 +408,125 @@ const getAllUsers = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+// Function to calculate all admin stats
+const getAdminStats = async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalBookings = await Booking.countDocuments();
+
+    const totalIncomeAgg = await Booking.aggregate([
+      { $group: { _id: null, total: { $sum: "$total" } } }
+    ]);
+    const totalIncome = totalIncomeAgg.length > 0 ? totalIncomeAgg[0].total : 0;
+
+    const dailyIncome = await Booking.aggregate([
+      {
+        $group: {
+          _id: {
+            year: { $year: "$date" },
+            month: { $month: "$date" },
+            day: { $dayOfMonth: "$date" }
+          },
+          total: { $sum: "$total" }
+        }
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } }
+    ]);
+
+    const monthlyIncome = await Booking.aggregate([
+      {
+        $group: {
+          _id: {
+            year: { $year: "$date" },
+            month: { $month: "$date" }
+          },
+          total: { $sum: "$total" }
+        }
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } }
+    ]);
+
+    res.json({
+      totalUsers,
+      totalBookings,
+      totalIncome,
+      dailyIncome,
+      monthlyIncome,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_SECRET,
+});
+
+// ✅ Create order
+// const createOrder = async (req, res) => {
+//   try {
+//     const options = {
+//       amount: req.body.amount, // amount in paisa
+//       currency: req.body.currency,
+//       receipt: "receipt_order_" + Date.now(),
+//     };
+//     const order = await razorpay.orders.create(options);
+//     res.json(order);
+//   } catch (err) {
+//     console.error("Order creation error:", err);
+//     res.status(500).json({ message: "Order creation failed" });
+//   }
+// };
+
+// // ✅ Verify payment + Save booking
+// const verifyPayment = async (req, res) => {
+//   try {
+//     const {
+//       razorpay_order_id,
+//       razorpay_payment_id,
+//       razorpay_signature,
+//       email,
+//       services,
+//       total,
+//       eventDate,
+//     } = req.body;
+
+//     const body = razorpay_order_id + "|" + razorpay_payment_id;
+
+//     const expectedSignature = crypto
+//       .createHmac("sha256", process.env.RAZORPAY_SECRET)
+//       .update(body.toString())
+//       .digest("hex");
+
+//     if (expectedSignature !== razorpay_signature) {
+//       return res.status(400).json({ success: false, message: "Invalid signature" });
+//     }
+
+//     const booking = new Booking({
+//       email,
+//       services,
+//       total,
+//       eventDate: new Date(eventDate),
+//       paymentId: razorpay_payment_id,
+//       date: new Date(),
+//     });
+
+//     await booking.save();
+
+//     res.json({
+//       success: true,
+//       message: "Payment verified & booking saved successfully",
+//       booking,
+//     });
+//   } catch (err) {
+//     console.error("Payment verification error:", err);
+//     res.status(500).json({ message: "Verification failed" });
+//   }
+// };
 
 
 
@@ -421,4 +549,7 @@ module.exports = {
   updateBookingStatus,
   getAllBookings,
   getAllUsers,
+  getAdminStats,
+  // createOrder,
+  // verifyPayment,
 };

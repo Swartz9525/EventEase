@@ -12,7 +12,7 @@ import "animate.css";
 // 🔹 Static images for Past Events
 const staticImages = [
   "https://images.unsplash.com/photo-1504384308090-c894fdcc538d",
-  "https://images.unsplash.com/photo-1551836022-4c4c79ecde16",
+  "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
   "https://images.unsplash.com/photo-1531058020387-3be344556be6",
   "https://images.unsplash.com/photo-1526045612212-70caf35c14df",
   "https://images.unsplash.com/photo-1509228627152-72ae9ae6848d",

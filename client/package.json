@@ -20,6 +20,7 @@
     "firebase": "^11.10.0",
     "framer-motion": "^12.23.3",
     "jwt-decode": "^4.0.0",
+    "razorpay": "^2.9.6",
     "react": "^19.1.0",
     "react-bootstrap": "^2.10.10",
     "react-bootstrap-icons": "^1.11.6",

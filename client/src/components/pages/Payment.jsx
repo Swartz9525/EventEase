@@ -1,8 +1,8 @@
+// src/pages/Payment.jsx
 import React, { useEffect, useState } from "react";
 import {
   Container,
   Card,
-  Form,
   Button,
   ListGroup,
   Toast,
@@ -17,15 +17,8 @@ const Payment = () => {
   const [total, setTotal] = useState(0);
   const [showToast, setShowToast] = useState(false);
   const [error, setError] = useState("");
-  const [eventDate, setEventDate] = useState(""); // new state for event day
+  const [eventDate, setEventDate] = useState("");
   const navigate = useNavigate();
-
-  const [cardInfo, setCardInfo] = useState({
-    name: "",
-    number: "",
-    expiry: "",
-    cvv: "",
-  });
 
   useEffect(() => {
     const selectedAddons =
@@ -47,93 +40,159 @@ const Payment = () => {
     ];
 
     setServices(allServices);
+
     const totalPrice = allServices.reduce(
-      (acc, s) => acc + s.price * s.quantity,
+      (acc, s) => acc + (Number(s.price) || 0) * (s.quantity || 1),
       0
     );
     setTotal(totalPrice);
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const loadRazorpay = () =>
+    new Promise((resolve) => {
+      if (window.Razorpay) return resolve(true);
+      if (document.getElementById("razorpay-script")) return resolve(true);
+      const script = document.createElement("script");
+      script.id = "razorpay-script";
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
 
-    if (name === "number") {
-      let digits = value.replace(/\D/g, "").slice(0, 16);
-      let formatted = digits.replace(/(.{4})/g, "$1 ").trim();
-      setCardInfo((prev) => ({ ...prev, number: formatted }));
-    } else if (name === "expiry") {
-      let digits = value.replace(/\D/g, "").slice(0, 4);
-      if (digits.length > 2)
-        digits = digits.slice(0, 2) + "/" + digits.slice(2);
-      setCardInfo((prev) => ({ ...prev, expiry: digits }));
-    } else if (name === "cvv") {
-      let digits = value.replace(/\D/g, "").slice(0, 3);
-      setCardInfo((prev) => ({ ...prev, cvv: digits }));
-    } else {
-      setCardInfo((prev) => ({ ...prev, [name]: value }));
-    }
-  };
-
-  const validateCard = () => {
-    const numberRegex = /^(\d{4} ){3}\d{4}$/;
-    const expiryRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
-    const cvvRegex = /^\d{3}$/;
-
-    if (!cardInfo.name.trim()) return "Cardholder name is required";
-    if (!numberRegex.test(cardInfo.number)) return "Invalid card number";
-    if (!expiryRegex.test(cardInfo.expiry)) return "Expiry must be MM/YY";
-    if (!cvvRegex.test(cardInfo.cvv)) return "Invalid CVV";
-    if (!eventDate) return "Event date is required"; // validate event date
-    return null;
-  };
-
-  const handlePayment = async (e) => {
-    e.preventDefault();
+  const handlePayment = async () => {
     setError("");
 
-    const validationError = validateCard();
-    if (validationError) {
-      setError(validationError);
+    if (!eventDate) {
+      setError("Please select event date");
+      return;
+    }
+    if (total <= 0) {
+      setError("Cart is empty");
+      return;
+    }
+
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user) {
+      alert("User not logged in!");
+      return;
+    }
+
+    const sdkLoaded = await loadRazorpay();
+    if (!sdkLoaded) {
+      setError("Razorpay SDK failed to load. Check your internet connection.");
       return;
     }
 
     try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (!user) {
-        alert("User not logged in!");
+      // Create order on backend
+      const orderResp = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/payment/order`,
+        {
+          amount: Math.round(total * 100),
+          currency: "INR",
+          services, // optional; server can recompute/check
+        }
+      );
+
+      const data = orderResp.data || {};
+      // defensive extraction (some servers wrap the order)
+      const orderId =
+        data.id || data.order?.id || data.order_id || data.orderId;
+      const amount =
+        data.amount ||
+        (data.order && data.order.amount) ||
+        Math.round(total * 100);
+      const currency =
+        data.currency || (data.order && data.order.currency) || "INR";
+
+      if (!orderId) {
+        console.error("Order creation response (unexpected shape):", data);
+        setError(
+          "Order creation failed (invalid response). Check server logs."
+        );
         return;
       }
 
-      const bookingData = {
-        email: user.email,
-        services,
-        total,
-        date: new Date().toISOString(),
-        eventDate: new Date(eventDate), // send event day
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID, // make sure this env var exists (Vite: VITE_RAZORPAY_KEY_ID)
+        amount,
+        currency,
+        name: "Event Booking",
+        description: "Payment for services",
+        order_id: orderId,
+        handler: async (razorpayRes) => {
+          try {
+            console.log("Razorpay response:", razorpayRes);
+
+            // sanitize services so required fields exist (Booking schema requires name)
+            const sanitizedServices = (services || []).map((s, idx) => ({
+              name: s.name || s.title || `Service ${idx + 1}`,
+              type: s.type || "Unknown",
+              price: Number(s.price) || 0,
+              quantity: Number(s.quantity) || 1,
+            }));
+
+            const payload = {
+              razorpay_order_id: razorpayRes.razorpay_order_id,
+              razorpay_payment_id: razorpayRes.razorpay_payment_id,
+              razorpay_signature: razorpayRes.razorpay_signature,
+              email: user.email,
+              services: sanitizedServices,
+              total: Number(total),
+              // send eventDate as ISO so backend receives a parseable date
+              eventDate: new Date(eventDate).toISOString(),
+            };
+
+            console.log("Verify payload:", payload);
+
+            const verifyResp = await axios.post(
+              `${import.meta.env.VITE_BACKEND_URL}/api/payment/verify`,
+              payload
+            );
+
+            console.log("Verify response:", verifyResp.data);
+            setShowToast(true);
+            setTimeout(() => {
+              localStorage.removeItem("selectedAddons");
+              localStorage.removeItem("selectedSubServices");
+              localStorage.removeItem("totalPrice");
+              navigate("/profile");
+            }, 2000);
+          } catch (err) {
+            console.error("Verify error:", err);
+            const backendMsg =
+              err?.response?.data?.message ||
+              err?.response?.data?.error ||
+              (err?.response?.data ? JSON.stringify(err.response.data) : null);
+            setError(
+              backendMsg || err.message || "Payment verification failed"
+            );
+          }
+        },
+        prefill: { name: user.name, email: user.email },
+        theme: { color: "#3399cc" },
+        modal: {
+          ondismiss: () => {
+            setError("Payment cancelled by user");
+          },
+        },
       };
 
-      await axios.post("http://localhost:5000/api/bookings", bookingData);
-
-      setShowToast(true);
-
-      setTimeout(() => {
-        localStorage.removeItem("selectedAddons");
-        localStorage.removeItem("selectedSubServices");
-        localStorage.removeItem("totalPrice");
-        navigate("/profile");
-      }, 2500);
+      const rzp = new window.Razorpay(options);
+      rzp.open();
     } catch (err) {
-      console.error("Payment error:", err);
-      setError(
-        err.response?.data?.message || "Payment failed. Please try again."
-      );
+      console.error("Order creation error:", err);
+      const serverMsg =
+        err?.response?.data?.message || err?.response?.data || err.message;
+      setError(serverMsg || "Something went wrong. Try again.");
     }
   };
 
   return (
     <Container className="py-5 position-relative">
       <Card className="mx-auto shadow p-4" style={{ maxWidth: "600px" }}>
-        <h3 className="text-center mb-4">Payment Method</h3>
+        <h3 className="text-center mb-4">Payment</h3>
 
         {error && <Alert variant="danger">{error}</Alert>}
 
@@ -144,7 +203,9 @@ const Payment = () => {
                 <div>
                   {s.name || s.title} ({s.type}) x {s.quantity}
                 </div>
-                <div>₹{(s.price * s.quantity).toLocaleString()}</div>
+                <div>
+                  ₹{((s.price || 0) * (s.quantity || 1)).toLocaleString()}
+                </div>
               </div>
             </ListGroup.Item>
           ))}
@@ -154,70 +215,21 @@ const Payment = () => {
           </ListGroup.Item>
         </ListGroup>
 
-        <Form onSubmit={handlePayment}>
-          <Form.Group className="mb-3">
-            <Form.Label>Event Date</Form.Label>
-            <Form.Control
-              type="date"
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
-              required
-            />
-          </Form.Group>
+        <input
+          type="date"
+          className="form-control mb-3"
+          value={eventDate}
+          onChange={(e) => setEventDate(e.target.value)}
+          required
+        />
 
-          <Form.Group className="mb-3">
-            <Form.Label>Cardholder Name</Form.Label>
-            <Form.Control
-              type="text"
-              name="name"
-              value={cardInfo.name}
-              onChange={handleChange}
-              required
-              placeholder="Enter name"
-            />
-          </Form.Group>
-
-          <Form.Group className="mb-3">
-            <Form.Label>Card Number</Form.Label>
-            <Form.Control
-              type="text"
-              name="number"
-              value={cardInfo.number}
-              onChange={handleChange}
-              required
-              placeholder="1234 5678 9012 3456"
-            />
-          </Form.Group>
-
-          <Form.Group className="d-flex gap-3 mb-3">
-            <div className="flex-fill">
-              <Form.Label>Expiry (MM/YY)</Form.Label>
-              <Form.Control
-                type="text"
-                name="expiry"
-                value={cardInfo.expiry}
-                onChange={handleChange}
-                required
-                placeholder="MM/YY"
-              />
-            </div>
-            <div className="flex-fill">
-              <Form.Label>CVV</Form.Label>
-              <Form.Control
-                type="password"
-                name="cvv"
-                value={cardInfo.cvv}
-                onChange={handleChange}
-                required
-                placeholder="***"
-              />
-            </div>
-          </Form.Group>
-
-          <Button variant="success" type="submit" className="w-100 fw-bold">
-            Pay Now ₹{total.toLocaleString()}
-          </Button>
-        </Form>
+        <Button
+          variant="success"
+          onClick={handlePayment}
+          className="w-100 fw-bold"
+        >
+          Pay Now ₹{total.toLocaleString()}
+        </Button>
       </Card>
 
       <ToastContainer position="top-center" className="p-3">

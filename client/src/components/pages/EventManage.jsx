@@ -7,8 +7,10 @@ import {
   Badge,
   Button,
   Form,
+  Spinner,
 } from "react-bootstrap";
 import { ArrowLeft, Clock, CurrencyRupee, Upload } from "react-bootstrap-icons";
+import axios from "axios";
 
 const EventManage = () => {
   const location = useLocation();
@@ -17,6 +19,7 @@ const EventManage = () => {
 
   const [emails, setEmails] = useState([]);
   const [manualInput, setManualInput] = useState("");
+  const [loading, setLoading] = useState(false);
 
   if (!booking) {
     return (
@@ -43,17 +46,17 @@ const EventManage = () => {
     }
   };
 
-  // ✅ Handle manual email input
+  // ✅ Add emails from input
   const handleAddEmails = () => {
     const newEmails = manualInput
-      .split(/[\s,;]+/) // split by comma, semicolon or space
+      .split(/[\s,;]+/)
       .map((e) => e.trim())
-      .filter((e) => e.includes("@") && !emails.includes(e)); // simple validation
+      .filter((e) => e.includes("@") && !emails.includes(e));
     setEmails([...emails, ...newEmails]);
     setManualInput("");
   };
 
-  // ✅ Handle file upload (CSV/TXT)
+  // ✅ Upload from CSV/TXT
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -70,9 +73,27 @@ const EventManage = () => {
     reader.readAsText(file);
   };
 
-  // ✅ Remove an email
+  // ✅ Remove email
   const removeEmail = (email) => {
     setEmails(emails.filter((e) => e !== email));
+  };
+
+  // ✅ Save emails to backend
+  const saveInvites = async () => {
+    if (!emails.length) return alert("No emails added!");
+    try {
+      setLoading(true);
+      await axios.post("http://localhost:5000/api/bookings/invite", {
+        bookingId: booking._id,
+        emails,
+      });
+      alert("Invites saved successfully ✅");
+    } catch (error) {
+      console.error(error);
+      alert("Failed to save invites ❌");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -81,6 +102,7 @@ const EventManage = () => {
         <ArrowLeft className="me-1" /> Back
       </Button>
 
+      {/* Booking details */}
       <Card className="shadow-sm border-0 mb-4">
         <Card.Header className="bg-light">
           <h4 className="mb-0">Manage Booking</h4>
@@ -141,7 +163,7 @@ const EventManage = () => {
         </Card.Body>
       </Card>
 
-      {/* ✅ New Section for Emails */}
+      {/* Email Invite Section */}
       <Card className="shadow-sm border-0">
         <Card.Header className="bg-light">
           <h5 className="mb-0">Invite Participants</h5>
@@ -180,7 +202,7 @@ const EventManage = () => {
           {emails.length > 0 && (
             <>
               <h6 className="fw-bold mt-3">Added Emails</h6>
-              <ListGroup>
+              <ListGroup className="mb-3">
                 {emails.map((email, idx) => (
                   <ListGroup.Item
                     key={idx}
@@ -197,6 +219,26 @@ const EventManage = () => {
                   </ListGroup.Item>
                 ))}
               </ListGroup>
+              <Button
+                variant="success"
+                disabled={loading}
+                onClick={saveInvites}
+              >
+                {loading ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      className="me-2"
+                    />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Invites"
+                )}
+              </Button>
             </>
           )}
         </Card.Body>

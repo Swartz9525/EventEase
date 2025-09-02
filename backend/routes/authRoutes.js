@@ -19,51 +19,57 @@ const {
   getAllBookings,
   updateBookingStatus,
   getAllUsers,
+  getAdminStats,
+  createOrder,
+  verifyPayment,
 } = require("../controllers/authController");
 const { verifyToken } = require("../middleware/auth");
-const multer = require("multer");
-const path = require("path");
 
 const router = express.Router();
 
-// ===== Multer setup for service image uploads =====
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/"); // folder for storing images
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
-const upload = multer({ storage });
-
-// ===== Auth Routes =====
+// ================= AUTH ROUTES =================
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/forgot-password", forgotPassword);
 router.post("/refresh", refreshToken);
 router.post("/change-password", verifyToken, changePassword);
 
-// ===== Service Routes =====
-router.post("/services", upload.single("image"), addService);
+// ================= SERVICE ROUTES =================
+router.post("/services", addService);
 router.get("/services", getServices);
-router.put("/services/:id", upload.single("image"), updateService);
+router.put("/services/:id", updateService);
 router.delete("/services/:id", deleteService);
 
-// ===== SubService Routes =====
+// ================= SUB-SERVICE ROUTES =================
 router.post("/subservices", addSubService);
 router.get("/subservices", getSubServices);
 router.put("/subservices/:id", updateSubService);
 router.delete("/subservices/:id", deleteSubService);
 
-// Route to create booking (no token required)
+// ================= BOOKING ROUTES =================
+// Create booking (public route)
 router.post("/bookings", createBooking);
 
-// Route to get bookings by email (no token required)
+// Get bookings by email (public route, query param: ?email=xyz)
 router.get("/bookings", getBookingsByEmail);
 
-router.get("/booking", getAllBookings);
-router.put("/booking:id/status", updateBookingStatus);
+// Get all bookings (admin use)
+router.get("/bookings/all", getAllBookings);
 
-router.get("/users",getAllUsers);
+// Update booking status (admin use)
+router.put("/bookings/:id/status", updateBookingStatus);
+router.patch("/bookings/:id", updateBookingStatus);
+
+// ================= USER ROUTES =================
+router.get("/users", getAllUsers);
+
+//================== Admin =======================
+router.get("/admin/stats", getAdminStats);
+
+// //=================create payment order==================
+// router.post("/payment/order", createOrder);
+
+// //=================verify payment==================
+// router.post("/payment/verify", verifyPayment);
+
 module.exports = router;

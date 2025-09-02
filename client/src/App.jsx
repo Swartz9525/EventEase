@@ -32,6 +32,7 @@ import EventManage from "./components/pages/EventManage";
 import ForgotPassword from "./components/authentication/ForgotPassword";
 import ResetPassword from "./components/authentication/ResetPassword";
 import AdminRoute from "./admin/AdminRoute";
+import AddService from "./admin/AddService";
 import AdminDashboard from "./admin/AdminDashboard";
 
 // ✅ Layout Component
@@ -90,6 +91,14 @@ const router = createBrowserRouter(
           element: (
             <AdminRoute>
               <AdminDashboard />
+            </AdminRoute>
+          ),
+        },
+        {
+          path: "add-services",
+          element: (
+            <AdminRoute>
+              <AddService />
             </AdminRoute>
           ),
         },

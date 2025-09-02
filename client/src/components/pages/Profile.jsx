@@ -20,8 +20,10 @@ const Profile = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [expandedBooking, setExpandedBooking] = useState(null);
+  const [cancelingId, setCancelingId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -117,6 +119,8 @@ const Profile = () => {
         return "success";
       case "rejected":
         return "danger";
+      case "cancelled":
+        return "secondary";
       case "pending":
       default:
         return "warning";
@@ -130,6 +134,43 @@ const Profile = () => {
   // ✅ Pass booking details to /event-manage
   const handleManage = (booking) => {
     navigate(`/event-manage`, { state: { booking } });
+  };
+
+  // ---- New: Cancel (soft-delete) booking by setting status to 'cancelled'
+  const handleCancel = async (bookingId) => {
+    if (!bookingId) return;
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this booking? This will mark it as cancelled."
+    );
+    if (!confirmed) return;
+
+    setError("");
+    setSuccessMsg("");
+    setCancelingId(bookingId);
+
+    try {
+      // PATCH request to update booking status (adjust endpoint if your backend uses a different one)
+      const { data } = await axios.patch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/bookings/${bookingId}`,
+        { status: "cancelled" }
+      );
+
+      // Update local UI (optimistic)
+      setBookings((prev) =>
+        prev.map((b) =>
+          b._id === bookingId ? { ...b, status: "cancelled" } : b
+        )
+      );
+
+      setSuccessMsg("Booking has been cancelled.");
+      // clear success msg after 3s
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err) {
+      console.error("Cancel error:", err);
+      setError(err.response?.data?.message || "Failed to cancel booking");
+    } finally {
+      setCancelingId(null);
+    }
   };
 
   return (
@@ -147,6 +188,7 @@ const Profile = () => {
       </Row>
 
       {error && <Alert variant="warning">{error}</Alert>}
+      {successMsg && <Alert variant="success">{successMsg}</Alert>}
 
       {loading && !bookings.length ? (
         <div className="text-center py-5">
@@ -188,7 +230,7 @@ const Profile = () => {
                       bg={getStatusBadgeVariant(booking.status)}
                       className="me-2"
                     >
-                      {booking.status.toUpperCase()}
+                      {booking.status?.toUpperCase()}
                     </Badge>
                     {booking.eventDate && (
                       <Badge bg={getEventBadgeVariant(booking.eventDate)}>
@@ -202,6 +244,7 @@ const Profile = () => {
                       <CurrencyRupee className="me-1" size={16} />
                       {booking.total.toLocaleString()}
                     </Badge>
+
                     <Button
                       variant="outline-primary"
                       size="sm"
@@ -209,6 +252,7 @@ const Profile = () => {
                     >
                       {isExpanded ? "Show Less" : "View Details"}
                     </Button>
+
                     <OverlayTrigger
                       placement="top"
                       overlay={
@@ -234,6 +278,26 @@ const Profile = () => {
                         </Button>
                       </span>
                     </OverlayTrigger>
+
+                    {/* Delete/Cancel button */}
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      className="ms-2"
+                      onClick={() => handleCancel(booking._id)}
+                      disabled={
+                        booking.status === "cancelled" ||
+                        cancelingId === booking._id
+                      }
+                    >
+                      {cancelingId === booking._id ? (
+                        <Spinner as="span" animation="border" size="sm" />
+                      ) : booking.status === "cancelled" ? (
+                        "Cancelled"
+                      ) : (
+                        "Delete"
+                      )}
+                    </Button>
                   </div>
                 </div>
               </Card.Header>
