@@ -34,7 +34,7 @@ const Settings = () => {
 
     if (form.currentPassword && form.newPassword) {
       try {
-        const res = await fetch("http://localhost:5000/api/change-password", {
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/change-password`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

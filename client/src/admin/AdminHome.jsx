@@ -27,7 +27,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 const COLORS = ["#4CAF50", "#2196F3", "#FF9800", "#9C27B0", "#FF5722"];
 
 const AdminHome = () => {

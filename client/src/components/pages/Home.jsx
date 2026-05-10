@@ -51,7 +51,7 @@ const Home = () => {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/services");
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/services`);
         setServices(res.data.slice(0, 4));
       } catch (err) {
         console.error("Error fetching services:", err);

@@ -47,7 +47,7 @@ const AdminServices = () => {
   const fetchServices = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:5000/api/services");
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/services`);
       setServices(res.data);
       setError("");
     } catch {
@@ -60,7 +60,7 @@ const AdminServices = () => {
   // Delete service
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/api/services/${id}`);
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/services/${id}`);
       toast.success("Service deleted successfully");
       fetchServices();
     } catch {
@@ -131,7 +131,7 @@ const AdminServices = () => {
       };
 
       const { data: updated } = await axios.put(
-        `http://localhost:5000/api/services/${editData._id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/services/${editData._id}`,
         updatedService
       );
 

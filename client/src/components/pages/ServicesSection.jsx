@@ -21,7 +21,7 @@ const ServicesSection = () => {
   const fetchServices = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:5000/api/services");
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/services`);
       setServices(res.data);
       setError("");
     } catch (err) {

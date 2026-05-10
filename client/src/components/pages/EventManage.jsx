@@ -83,7 +83,7 @@ const EventManage = () => {
     if (!emails.length) return alert("No emails added!");
     try {
       setLoading(true);
-      await axios.post("http://localhost:5000/api/bookings/invite", {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/bookings/invite`, {
         bookingId: booking._id,
         emails,
       });

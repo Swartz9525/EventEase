@@ -4,6 +4,7 @@ const {
   registerUser,
   loginUser,
   forgotPassword,
+  resetPassword,
   refreshToken,
   changePassword,
   addService,
@@ -20,8 +21,6 @@ const {
   updateBookingStatus,
   getAllUsers,
   getAdminStats,
-  createOrder,
-  verifyPayment,
 } = require("../controllers/authController");
 const { verifyToken } = require("../middleware/auth");
 
@@ -31,6 +30,7 @@ const router = express.Router();
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/forgot-password", forgotPassword);
+router.post("/reset-password/:token", resetPassword);
 router.post("/refresh", refreshToken);
 router.post("/change-password", verifyToken, changePassword);
 

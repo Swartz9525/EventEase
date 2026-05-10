@@ -68,14 +68,14 @@ const AddService = () => {
           throw new Error("Cloudinary did not return an image URL");
 
         // Save Service (✅ no price)
-        await axios.post("http://localhost:5000/api/services", {
+        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/services`, {
           name: formData.name,
           description: formData.description,
           image: imageUrl,
         });
       } else {
         // Save SubService (✅ schema fields aligned)
-        await axios.post("http://localhost:5000/api/subservices", {
+        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/subservices`, {
           title: formData.title,
           description: formData.descriptionSub,
           price: formData.priceSub,

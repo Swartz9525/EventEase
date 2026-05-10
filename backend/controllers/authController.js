@@ -121,6 +121,36 @@ const forgotPassword = async (req, res) => {
   }
 };
 
+// RESET PASSWORD
+const resetPassword = async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  if (!password || password.length < 6) {
+    return res.status(400).json({ message: "Password must be at least 6 characters" });
+  }
+
+  try {
+    // Verify the reset token (same secret used in forgotPassword)
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const user = await User.findById(decoded.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Hash and save new password
+    user.password = await bcrypt.hash(password, 10);
+    await user.save();
+
+    res.json({ message: "Password reset successfully" });
+  } catch (err) {
+    console.error("Reset password error:", err);
+    if (err.name === "TokenExpiredError") {
+      return res.status(400).json({ message: "Reset link has expired. Please request a new one." });
+    }
+    return res.status(400).json({ message: "Invalid or expired reset token" });
+  }
+};
+
 // REFRESH TOKEN
 const refreshToken = async (req, res) => {
   const { refreshToken } = req.body;
@@ -534,6 +564,7 @@ module.exports = {
   registerUser,
   loginUser,
   forgotPassword,
+  resetPassword,
   refreshToken,
   changePassword,
   addService,
@@ -550,6 +581,4 @@ module.exports = {
   getAllBookings,
   getAllUsers,
   getAdminStats,
-  // createOrder,
-  // verifyPayment,
 };

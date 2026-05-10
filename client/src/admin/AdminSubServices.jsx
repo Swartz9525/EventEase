@@ -42,7 +42,7 @@ const AdminSubServices = () => {
   const fetchSubServices = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:5000/api/subservices");
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/subservices`);
       setSubServices(res.data);
       setError("");
     } catch {
@@ -55,7 +55,7 @@ const AdminSubServices = () => {
   // Delete sub service
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/api/subservices/${id}`);
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/subservices/${id}`);
       toast.success("Sub service deleted successfully");
       fetchSubServices();
     } catch {
@@ -94,7 +94,7 @@ const AdminSubServices = () => {
       };
 
       await axios.put(
-        `http://localhost:5000/api/subservices/${editData._id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/subservices/${editData._id}`,
         updatedService
       );
 
